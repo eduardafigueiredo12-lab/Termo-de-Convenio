@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gerador de Termo de Convênio - UniFatecie</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main class="container">
+    <section class="hero">
+      <div class="brand">
+        <img src="logo.png" alt="UniFatecie" class="logo" onerror="this.style.display='none'" />
+        <div class="brand-text">Centro Universitário UniFatecie</div>
+      </div>
+      <h1>Gerador de Termo de Convênio</h1>
+      <p>Preencha os dados da unidade concedente, baixe o termo preenchido e encaminhe para análise do Setor de Convênios através do e-mail <strong>convenios.ead@fatecie.edu.br</strong></p>
+    </section>
+
+    <form id="form" class="card">
+      <section class="section">
+        <div class="section-title"><span>1</span><div><h2>Tipo de estágio e curso</h2></div></div>
+        <div class="grid two">
+          <label>Tipo de estágio *
+            <select id="tipo_estagio" required>
+              <option value="">Selecione...</option>
+              <option>Estágio obrigatório</option>
+              <option>Estágio remunerado</option>
+            </select>
+          </label>
+          <label>Curso *
+            <select id="curso" required>
+              <option value="">Selecione...</option>
+              <option>Biomedicina</option>
+              <option>Farmácia</option>
+              <option>Fonoaudiologia</option>
+              <option>Fisioterapia</option>
+              <option>Nutrição</option>
+              <option>Terapia Ocupacional</option>
+              <option>Radiologia</option>
+              <option>Técnicas Oftálmicas</option>
+              <option>Pós em Procedimentos Injetáveis</option>
+              <option>Engenharias</option>
+              <option>Licenciaturas</option>
+              <option>Técnico em Enfermagem</option>
+              <option>Técnico em Transações Imobiliárias</option>
+              <option>Outro</option>
+            </select>
+          </label>
+        </div>
+        <div id="outroCursoBox" class="hidden outro-curso">
+          <label>Informe o curso *
+            <input id="outro_curso" placeholder="Digite o nome do curso" />
+          </label>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-title"><span>2</span><div><h2>Dados da unidade concedente</h2></div></div>
+        <div class="grid cnpj-row">
+          <label>CNPJ *
+            <input id="cnpj" required placeholder="00.000.000/0000-00" />
+          </label>
+          <button type="button" id="buscar">Buscar CNPJ</button>
+        </div>
+        <div id="msg" class="msg"></div>
+        <div class="grid two">
+          <label>Razão social *
+            <input id="razao_social" required />
+          </label>
+          <label>Alvará de Funcionamento/Sanitário
+            <input id="alvara" />
+          </label>
+          <label>Endereço *
+            <input id="endereco" required />
+          </label>
+          <label>Número *
+            <input id="numero" required />
+          </label>
+          <label>Complemento
+            <input id="complemento" />
+          </label>
+          <label>Bairro *
+            <input id="bairro" required />
+          </label>
+          <label>CEP *
+            <input id="cep" required />
+          </label>
+          <label>Cidade *
+            <input id="cidade" required />
+          </label>
+          <label>Estado *
+            <input id="estado" required />
+          </label>
+          <label>Telefone / WhatsApp *
+            <input id="telefone" required />
+            <small>Preferencialmente informar número com WhatsApp para contato.</small>
+          </label>
+          <label>Site ou e-mail da empresa
+            <input id="site" />
+          </label>
+          <label>Estimativa de vagas
+            <input id="estimativa_vagas" />
+          </label>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-title"><span>3</span><div><h2>Responsável pela assinatura</h2><p>O responsável deve ser, preferencialmente, proprietário ou sócio do estabelecimento.</p></div></div>
+
+        <div id="sociosBox" class="socios hidden">
+          <label>Selecionar sócio/administrador
+            <select id="socios"></select>
+          </label>
+        </div>
+
+        <label class="check">
+          <input type="checkbox" id="outraPessoa" />
+          Outra pessoa irá assinar o documento
+        </label>
+
+        <div id="avisoCartorio" class="warning hidden">
+          Caso outra pessoa assine, deverá apresentar documento reconhecido em cartório comprovando o vínculo com a empresa, como holerite, procuração, ata de eleição ou documento equivalente.
+        </div>
+
+        <div class="grid two">
+          <label>Representante *
+            <input id="representante" required />
+          </label>
+          <label>Cargo *
+            <input id="cargo" required />
+          </label>
+          <label>E-mail para assinatura digital *
+            <input id="email_assinatura" type="email" required />
+          </label>
+        </div>
+      </section>
+
+      <div class="actions">
+        <button type="submit" class="primary">Baixar termo preenchido</button>
+      </div>
+    </form>
+  </main>
+
+<script src="script.js"></script>
+
+  <div id="loadingOverlay" class="loading-overlay hidden" aria-live="polite" aria-busy="true">
+    <div class="loading-card">
+      <img src="logo.png" alt="UniFatecie" class="loading-logo" onerror="this.style.display='none'" />
+      <div class="loading-spinner"></div>
+      <h3 id="loadingTitle">Gerando documento</h3>
+      <p id="loadingText">Aguarde alguns instantes. Não feche esta página.</p>
+    </div>
+  </div>
+
+</body>
+</html>

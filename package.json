@@ -1,0 +1,15 @@
+{
+  "name": "gerador-convenio-unifatecie",
+  "version": "22.0.0",
+  "description": "Gerador de Termo de Convênio UniFatecie - Word preenchido e totalmente protegido",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "docxtemplater": "^3.49.1",
+    "express": "^4.18.3",
+    "pizzip": "^3.1.7"
+  }
+}
