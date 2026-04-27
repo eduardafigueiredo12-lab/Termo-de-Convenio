@@ -127,9 +127,8 @@ el("cpf").addEventListener("input", e => {
 });
 
 function preencher(dados){
-  const mapa = ["razao_social","cep","endereco","numero","complemento","bairro","cidade","estado","telefone"];
+  const mapa = ["razao_social","cep","endereco","numero","complemento","bairro","cidade","estado"];
   mapa.forEach(k => { if (dados[k]) el(k).value = dados[k]; });
-  if (dados.email && !el("site").value) el("site").value = dados.email;
 
   sociosEncontrados = dados.socios || [];
   const sel = el("socios");
@@ -205,12 +204,13 @@ el("form").addEventListener("submit", async (e) => {
   const ids = [
     "tipo_estagio","curso","outro_curso","cnpj","cpf","razao_social","alvara","estimativa_vagas",
     "endereco","numero","complemento","bairro","cep","cidade","estado",
-    "telefone","site","responsavel_estagios","contato_responsavel","representante","cargo","email_assinatura"
+    "site","responsavel_estagios","contato_responsavel","representante","cargo","email_assinatura"
   ];
 
   const dados = {};
   ids.forEach(id => dados[id] = el(id)?.value || "");
   dados.tipo_unidade = tipoUnidade;
+  dados.telefone = dados.contato_responsavel;
   if (tipoUnidade === "cpf") {
     dados.cnpj = dados.cpf;
   }

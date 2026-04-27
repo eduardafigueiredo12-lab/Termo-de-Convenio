@@ -342,6 +342,14 @@ h1{
   line-height:1.25;
 }
 
+.field-hint{
+  margin:-6px 0 16px;
+  color:var(--muted);
+  font-size:15px;
+  line-height:1.45;
+  font-weight:700;
+}
+
 .choice-group{
   display:grid;
   grid-template-columns:repeat(2,minmax(0,1fr));

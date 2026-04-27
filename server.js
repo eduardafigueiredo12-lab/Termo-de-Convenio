@@ -81,10 +81,74 @@ function checkCurso(curso, nome) {
 
 function montarContatoEmpresa(d) {
   return [
-    d.site || "",
-    d.responsavel_estagios ? `Responsável pelos estágios: ${d.responsavel_estagios}` : "",
-    d.contato_responsavel ? `Contato direto do responsável: ${d.contato_responsavel}` : ""
+    d.responsavel_estagios ? `Responsável pelo estágio ou setor responsável: ${d.responsavel_estagios}` : "",
+    d.contato_responsavel ? `Telefone de contato direto: ${d.contato_responsavel}` : "",
+    d.site ? `E-mail: ${d.site}` : ""
   ].filter(Boolean).join("\n");
+}
+
+function inserirProtecaoDocumento(settings, protectionTag) {
+  const marcadoresPosteriores = [
+    "autoFormatOverride",
+    "styleLockTheme",
+    "styleLockQFSet",
+    "defaultTabStop",
+    "autoHyphenation",
+    "consecutiveHyphenLimit",
+    "hyphenationZone",
+    "doNotHyphenateCaps",
+    "characterSpacingControl",
+    "printTwoOnOne",
+    "strictFirstAndLastChars",
+    "noLineBreaksAfter",
+    "noLineBreaksBefore",
+    "savePreviewPicture",
+    "doNotValidateAgainstSchema",
+    "saveInvalidXml",
+    "ignoreMixedContent",
+    "alwaysShowPlaceholderText",
+    "doNotDemarcateInvalidXml",
+    "saveXmlDataOnly",
+    "useXSLTWhenSaving",
+    "saveThroughXslt",
+    "showXMLTags",
+    "alwaysMergeEmptyNamespace",
+    "updateFields",
+    "hdrShapeDefaults",
+    "footnotePr",
+    "endnotePr",
+    "compat",
+    "docVars",
+    "rsids",
+    "mathPr",
+    "uiCompat97To2003",
+    "attachedSchema",
+    "themeFontLang",
+    "clrSchemeMapping",
+    "doNotIncludeSubdocsInStats",
+    "doNotAutoCompressPictures",
+    "forceUpgrade",
+    "captions",
+    "readModeInkLockDown",
+    "smartTagType",
+    "shapeDefaults",
+    "doNotEmbedSmartTags",
+    "decimalSymbol",
+    "listSeparator"
+  ];
+
+  let melhorIndice = -1;
+  for (const nome of marcadoresPosteriores) {
+    const indice = settings.search(new RegExp(`<w:${nome}\\b`));
+    if (indice !== -1 && (melhorIndice === -1 || indice < melhorIndice)) {
+      melhorIndice = indice;
+    }
+  }
+
+  if (melhorIndice !== -1) {
+    return `${settings.slice(0, melhorIndice)}${protectionTag}${settings.slice(melhorIndice)}`;
+  }
+  return settings.replace("</w:settings>", `${protectionTag}</w:settings>`);
 }
 
 function hashSenhaWordLegacy(password) {
@@ -122,7 +186,7 @@ function protegerDocumentoInteiro(buffer) {
   settings = settings.replace(/<w:documentProtection\b[\s\S]*?<\/w:documentProtection>/g, "");
 
   if (settings.includes("</w:settings>")) {
-    settings = settings.replace("</w:settings>", `${protectionTag}</w:settings>`);
+    settings = inserirProtecaoDocumento(settings, protectionTag);
   } else {
     settings += protectionTag;
   }
@@ -237,7 +301,7 @@ app.post("/api/gerar", (req, res) => {
       cep: d.cep || "",
       cidade: d.cidade || "",
       estado: d.estado || "",
-      telefone: d.telefone || "",
+      telefone: d.contato_responsavel || d.telefone || "",
       site: montarContatoEmpresa(d),
       responsavel_estagios: d.responsavel_estagios || "",
       contato_responsavel: d.contato_responsavel || "",
