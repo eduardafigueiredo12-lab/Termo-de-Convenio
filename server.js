@@ -87,6 +87,48 @@ function montarContatoEmpresa(d) {
   ].filter(Boolean).join("\n");
 }
 
+function corrigirCompatibilidadeDocumento(xml) {
+  const rootEnd = xml.indexOf(">");
+  if (rootEnd === -1) return xml;
+
+  const root = xml.slice(0, rootEnd + 1);
+  const ignorable = root.match(/\s([\w.-]+:Ignorable)="[^"]*"/);
+  if (!ignorable) return xml;
+
+  const namespaces = [...root.matchAll(/\sxmlns:([\w.-]+)="([^"]+)"/g)];
+  const prefixesIgnoraveis = namespaces
+    .filter(([, , uri]) => (
+      uri.includes("schemas.microsoft.com/office/word/") ||
+      uri.includes("schemas.microsoft.com/office/drawing/") ||
+      uri.includes("schemas.microsoft.com/office/powerpoint/")
+    ))
+    .map(([, prefix]) => prefix);
+
+  const novoRoot = prefixesIgnoraveis.length
+    ? root.replace(/\s[\w.-]+:Ignorable="[^"]*"/, ` ${ignorable[1]}="${prefixesIgnoraveis.join(" ")}"`)
+    : root.replace(/\s[\w.-]+:Ignorable="[^"]*"/, "");
+
+  return `${novoRoot}${xml.slice(rootEnd + 1)}`;
+}
+
+function removerAtributosInvalidosTblLook(xml) {
+  const atributos = "firstRow|lastRow|firstColumn|lastColumn|noHBand|noVBand";
+  const padrao = new RegExp(`(<w:tblLook\\b[^>]*?)\\s+w:(${atributos})="[^"]*"`, "g");
+  let anterior;
+  do {
+    anterior = xml;
+    xml = xml.replace(padrao, "$1");
+  } while (xml !== anterior);
+  return xml;
+}
+
+function corrigirSettings(settings) {
+  return settings.replace(
+    /<w:compatSetting\b(?=[^>]*w:name="useWord2013TrackBottomHyphenation")[^>]*\/>/g,
+    ""
+  );
+}
+
 function inserirProtecaoDocumento(settings, protectionTag) {
   const marcadoresPosteriores = [
     "autoFormatOverride",
@@ -171,15 +213,15 @@ function hashSenhaWordLegacy(password) {
 
 function protegerDocumentoInteiro(buffer) {
   const zip = new PizZip(buffer);
-  const hash = hashSenhaWordLegacy(SENHA_PROTECAO);
 
   const protectionTag =
-    `<w:documentProtection w:edit="readOnly" w:enforcement="1" w:password="${hash}"/>`;
+    `<w:documentProtection w:edit="readOnly" w:enforcement="1" w:formatting="0"/>`;
 
   let settings = zip.file("word/settings.xml")
     ? zip.file("word/settings.xml").asText()
     : `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <w:settings xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"></w:settings>`;
+  settings = corrigirSettings(settings);
 
   // Remove qualquer proteção anterior para evitar duplicidade.
   settings = settings.replace(/<w:documentProtection\b[^>]*\/>/g, "");
@@ -194,6 +236,8 @@ function protegerDocumentoInteiro(buffer) {
 
   // Remove áreas editáveis anteriores. Assim, o documento inteiro fica bloqueado.
   let xml = zip.file("word/document.xml").asText();
+  xml = corrigirCompatibilidadeDocumento(xml);
+  xml = removerAtributosInvalidosTblLook(xml);
   xml = xml.replace(/<w:permStart\b[^>]*\/>/g, "");
   xml = xml.replace(/<w:permEnd\b[^>]*\/>/g, "");
   zip.file("word/document.xml", xml);
