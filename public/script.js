@@ -2,6 +2,26 @@ let sociosEncontrados = [];
 
 function el(id){ return document.getElementById(id); }
 function somenteNumeros(v){ return String(v || "").replace(/\D/g, ""); }
+function tipoUnidadeSelecionado(){
+  return document.querySelector("input[name='tipo_unidade']:checked")?.value || "cnpj";
+}
+
+function mascararCpf(v){
+  const n = somenteNumeros(v).slice(0, 11);
+  return n
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+}
+
+function mascararCnpj(v){
+  const n = somenteNumeros(v).slice(0, 14);
+  return n
+    .replace(/^(\d{2})(\d)/, "$1.$2")
+    .replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3")
+    .replace(/\.(\d{3})(\d)/, ".$1/$2")
+    .replace(/(\d{4})(\d)/, "$1-$2");
+}
 
 function mostrarLoading(titulo = "Gerando documento", texto = "Aguarde alguns instantes. Não feche esta página."){
   const overlay = el("loadingOverlay");
@@ -31,6 +51,52 @@ function atualizarCampoOutroCurso(){
 
 el("curso").addEventListener("change", atualizarCampoOutroCurso);
 document.addEventListener("DOMContentLoaded", atualizarCampoOutroCurso);
+
+function atualizarTipoUnidade(){
+  const profissional = tipoUnidadeSelecionado() === "cpf";
+  const cnpjBox = el("cnpjBox");
+  const cpfBox = el("cpfBox");
+  const cnpj = el("cnpj");
+  const cpf = el("cpf");
+  const buscar = el("buscar");
+  const razaoLabel = el("razaoLabel");
+  const alvaraLabel = el("alvaraLabel");
+  const msg = el("msg");
+
+  cnpjBox?.classList.toggle("hidden", profissional);
+  cpfBox?.classList.toggle("hidden", !profissional);
+  if (cnpj) cnpj.required = !profissional;
+  if (cpf) cpf.required = profissional;
+  if (buscar) buscar.disabled = profissional;
+  if (razaoLabel) razaoLabel.textContent = profissional ? "Nome completo do profissional *" : "Razão social *";
+  if (alvaraLabel) alvaraLabel.textContent = profissional ? "Registro profissional / alvará (se houver)" : "Alvará de Funcionamento/Sanitário";
+  if (msg) msg.textContent = "";
+
+  if (profissional) {
+    sociosEncontrados = [];
+    el("sociosBox")?.classList.add("hidden");
+    el("avisoCartorio")?.classList.add("hidden");
+    if (el("outraPessoa")) el("outraPessoa").checked = false;
+    if (!el("cargo").value || el("cargo").value === "Sócio/Administrador") {
+      el("cargo").value = "Profissional autônomo";
+    }
+  } else if (el("cargo").value === "Profissional autônomo") {
+    el("cargo").value = "";
+  }
+}
+
+document.querySelectorAll("input[name='tipo_unidade']").forEach(input => {
+  input.addEventListener("change", atualizarTipoUnidade);
+});
+document.addEventListener("DOMContentLoaded", atualizarTipoUnidade);
+
+el("cnpj").addEventListener("input", e => {
+  e.target.value = mascararCnpj(e.target.value);
+});
+
+el("cpf").addEventListener("input", e => {
+  e.target.value = mascararCpf(e.target.value);
+});
 
 function preencher(dados){
   const mapa = ["razao_social","cep","endereco","numero","complemento","bairro","cidade","estado","telefone"];
@@ -76,6 +142,7 @@ el("outraPessoa").addEventListener("change", e => {
 });
 
 el("buscar").addEventListener("click", async () => {
+  if (tipoUnidadeSelecionado() !== "cnpj") return;
   const cnpj = somenteNumeros(el("cnpj").value);
   const msg = el("msg");
   if (cnpj.length !== 14) {
@@ -100,14 +167,25 @@ el("buscar").addEventListener("click", async () => {
 el("form").addEventListener("submit", async (e) => {
   e.preventDefault();
 
+  const tipoUnidade = tipoUnidadeSelecionado();
+  if (tipoUnidade === "cpf" && somenteNumeros(el("cpf").value).length !== 11) {
+    alert("Informe um CPF válido.");
+    el("cpf").focus();
+    return;
+  }
+
   const ids = [
-    "tipo_estagio","curso","outro_curso","cnpj","razao_social","alvara","estimativa_vagas",
+    "tipo_estagio","curso","outro_curso","cnpj","cpf","razao_social","alvara","estimativa_vagas",
     "endereco","numero","complemento","bairro","cep","cidade","estado",
     "telefone","site","representante","cargo","email_assinatura"
   ];
 
   const dados = {};
   ids.forEach(id => dados[id] = el(id)?.value || "");
+  dados.tipo_unidade = tipoUnidade;
+  if (tipoUnidade === "cpf") {
+    dados.cnpj = dados.cpf;
+  }
 
   mostrarLoading("Gerando documento", "Estamos preparando o Termo de Convênio. Aguarde alguns instantes.");
 

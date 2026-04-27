@@ -10,7 +10,7 @@
   <header class="topbar">
     <div class="topbar-inner">
       <span>Centro Universitário UniFatecie</span>
-      <a href="https://site.unifatecie.edu.br/" target="_blank" rel="noopener">Portal UniFatecie</a>
+      <a href="https://portaldoaluno.fatecie.edu.br/login" target="_blank" rel="noopener">Portal do Aluno</a>
     </div>
   </header>
 
@@ -25,6 +25,46 @@
       </div>
       <h1>Gerador de Termo de Convênio</h1>
       <p>Preencha os dados da unidade concedente, baixe o termo preenchido e encaminhe para análise do Setor de Convênios através do e-mail <strong>convenios.ead@fatecie.edu.br</strong></p>
+    </section>
+
+    <section class="notice-panel" aria-labelledby="empresasTitle">
+      <div>
+        <h2 id="empresasTitle">Atenção!</h2>
+        <p>Antes de solicitar a formalização do convênio, verifique se a empresa já não é parceira da Unifatecie.</p>
+      </div>
+      <a class="button-link" href="https://estagios.unifatecie.edu.br/empresas-conveniadas/" target="_blank" rel="noopener">Consultar empresas parceiras</a>
+    </section>
+
+    <section class="resources-panel" aria-labelledby="manualTitle">
+      <div class="resources-heading">
+        <h2 id="manualTitle">Tutoriais e materiais de apoio</h2>
+        <p>Use estes materiais quando preferir preencher o termo manualmente ou orientar a pessoa que fará a assinatura digital.</p>
+      </div>
+      <div class="resource-grid">
+        <article class="resource-card">
+          <div>
+            <h3>Preenchimento manual do termo</h3>
+            <p>Passo a passo para preencher corretamente o Termo de Convênio.</p>
+          </div>
+          <video controls preload="metadata" src="materiais/tutorial-preenchimento-termo-convenio.mp4"></video>
+          <a class="resource-link" href="materiais/tutorial-para-convenio.pdf" target="_blank" rel="noopener">Abrir tutorial em PDF</a>
+        </article>
+        <article class="resource-card">
+          <div>
+            <h3>Assinatura do termo</h3>
+            <p>Orientação para assinar o documento na plataforma Clicksign.</p>
+          </div>
+          <video controls preload="metadata" src="materiais/tutorial-assinatura-termo-convenio.mp4"></video>
+          <a class="resource-link" href="materiais/tutorial-assinatura-clicksign.pdf" target="_blank" rel="noopener">Abrir tutorial da Clicksign em PDF</a>
+        </article>
+        <article class="resource-card support-card">
+          <div>
+            <h3>Profissional autônomo</h3>
+            <p>Quando o convênio for com profissional autônomo, além do termo preenchido com CPF, envie também a declaração profissional.</p>
+          </div>
+          <a class="resource-link" href="materiais/declaracao-de-profissional.docx">Baixar declaração de profissional</a>
+        </article>
+      </div>
     </section>
 
     <form id="form" class="card">
@@ -67,18 +107,42 @@
 
       <section class="section">
         <div class="section-title"><span>2</span><div><h2>Dados da unidade concedente</h2></div></div>
-        <div class="grid cnpj-row">
+        <div class="choice-group" role="radiogroup" aria-label="Tipo de unidade concedente">
+          <label class="choice-card">
+            <input type="radio" name="tipo_unidade" value="cnpj" checked />
+            <span>Empresa, órgão ou instituição</span>
+            <small>Use esta opção para unidades com CNPJ.</small>
+          </label>
+          <label class="choice-card">
+            <input type="radio" name="tipo_unidade" value="cpf" />
+            <span>Profissional autônomo</span>
+            <small>Use esta opção para unidades com CPF.</small>
+          </label>
+        </div>
+
+        <div id="cnpjBox" class="grid cnpj-row">
           <label>CNPJ *
             <input id="cnpj" required placeholder="00.000.000/0000-00" />
           </label>
           <button type="button" id="buscar">Buscar CNPJ</button>
         </div>
+        <div id="cpfBox" class="hidden">
+          <div class="grid two">
+            <label>CPF *
+              <input id="cpf" placeholder="000.000.000-00" />
+            </label>
+            <div class="warning inline-warning">
+              Profissionais autônomos devem enviar também a
+              <a href="materiais/declaracao-de-profissional.docx">declaração de profissional</a>.
+            </div>
+          </div>
+        </div>
         <div id="msg" class="msg"></div>
         <div class="grid two">
-          <label>Razão social *
+          <label><span id="razaoLabel">Razão social *</span>
             <input id="razao_social" required />
           </label>
-          <label>Alvará de Funcionamento/Sanitário
+          <label><span id="alvaraLabel">Alvará de Funcionamento/Sanitário</span>
             <input id="alvara" />
           </label>
           <label>Endereço *

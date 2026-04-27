@@ -135,6 +135,143 @@ h1{
   box-shadow:0 14px 38px rgba(37,39,42,.08);
 }
 
+.notice-panel{
+  margin-top:22px;
+  padding:22px 24px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:20px;
+  background:#fff7ed;
+  border:1px solid #fed7aa;
+  border-left:5px solid var(--laranja);
+  border-radius:8px;
+  box-shadow:0 10px 28px rgba(37,39,42,.07);
+}
+
+.notice-panel h2,
+.resources-heading h2,
+.resource-card h3{
+  margin:0;
+  letter-spacing:0;
+}
+
+.notice-panel h2{
+  color:#7c2d12;
+  font-size:24px;
+}
+
+.notice-panel p{
+  margin:6px 0 0;
+  color:#4b3426;
+  font-size:17px;
+  line-height:1.45;
+  font-weight:700;
+}
+
+.button-link,
+.resource-link{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height:48px;
+  border-radius:8px;
+  text-decoration:none;
+  font-weight:900;
+  transition:filter .16s ease, box-shadow .16s ease, transform .16s ease;
+}
+
+.button-link{
+  flex:0 0 auto;
+  padding:12px 18px;
+  background:var(--grafite);
+  color:#fff;
+}
+
+.button-link:hover,
+.resource-link:hover{
+  filter:brightness(.96);
+  box-shadow:0 8px 18px rgba(0,0,0,.12);
+}
+
+.button-link:active,
+.resource-link:active{transform:translateY(1px)}
+
+.resources-panel{
+  margin-top:22px;
+  padding:26px;
+  background:var(--superficie);
+  border:1px solid var(--borda);
+  border-radius:8px;
+  box-shadow:0 14px 38px rgba(37,39,42,.08);
+}
+
+.resources-heading{
+  margin-bottom:18px;
+}
+
+.resources-heading h2{
+  font-size:26px;
+  color:#313337;
+}
+
+.resources-heading p{
+  margin:8px 0 0;
+  color:var(--muted);
+  font-size:16px;
+  line-height:1.5;
+}
+
+.resource-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:18px;
+}
+
+.resource-card{
+  min-width:0;
+  padding:18px;
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+  border:1px solid #e5e7eb;
+  border-radius:8px;
+  background:#fbfcfd;
+}
+
+.resource-card h3{
+  color:#313337;
+  font-size:20px;
+  line-height:1.25;
+}
+
+.resource-card p{
+  margin:7px 0 0;
+  color:var(--muted);
+  line-height:1.45;
+}
+
+.resource-card video{
+  width:100%;
+  aspect-ratio:16/9;
+  border-radius:8px;
+  background:#111;
+}
+
+.resource-link{
+  align-self:flex-start;
+  padding:11px 15px;
+  background:var(--laranja);
+  color:#fff;
+}
+
+.support-card{
+  grid-column:1 / -1;
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  align-items:center;
+}
+
 .section{
   padding:26px 30px;
   border-bottom:1px solid #edf0f3;
@@ -178,6 +315,49 @@ h1{
 .grid{display:grid;gap:18px}
 .grid.two{grid-template-columns:repeat(2,minmax(0,1fr))}
 .cnpj-row{grid-template-columns:minmax(0,1fr) 190px;align-items:end}
+
+.choice-group{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:14px;
+  margin-bottom:18px;
+}
+
+.choice-card{
+  min-height:86px;
+  padding:15px 16px;
+  display:grid;
+  grid-template-columns:auto minmax(0,1fr);
+  column-gap:11px;
+  align-items:start;
+  border:1px solid #d9dde2;
+  border-radius:8px;
+  background:#fff;
+  cursor:pointer;
+}
+
+.choice-card:has(input:checked){
+  border-color:var(--laranja);
+  box-shadow:0 0 0 4px var(--foco);
+}
+
+.choice-card input{
+  width:auto;
+  min-height:0;
+  margin:3px 0 0;
+  accent-color:var(--laranja);
+}
+
+.choice-card span{
+  color:#313337;
+  font-size:16px;
+  font-weight:900;
+}
+
+.choice-card small{
+  grid-column:2;
+  margin-top:5px;
+}
 
 label{
   display:block;
@@ -265,6 +445,16 @@ button:active{transform:translateY(1px)}
   color:#7c2d12;
   font-weight:700;
   line-height:1.45;
+}
+
+.inline-warning{
+  margin:0;
+  align-self:end;
+}
+
+.inline-warning a{
+  color:#7c2d12;
+  font-weight:900;
 }
 
 .check{
@@ -370,6 +560,12 @@ button:active{transform:translateY(1px)}
   .logo{height:72px;max-width:220px}
   h1{font-size:31px}
   .hero p{font-size:16px}
+  .notice-panel{align-items:flex-start;flex-direction:column;padding:20px}
+  .button-link{width:100%}
+  .resources-panel{padding:20px}
+  .resource-grid,.support-card,.choice-group{grid-template-columns:1fr}
+  .support-card{display:flex;align-items:flex-start}
+  .resource-link{width:100%}
   .grid.two,.cnpj-row{grid-template-columns:1fr}
   .section{padding:22px 18px}
   .section-title{gap:12px}
