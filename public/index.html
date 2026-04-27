@@ -10,7 +10,10 @@
   <header class="topbar">
     <div class="topbar-inner">
       <span>Centro Universitário UniFatecie</span>
-      <a href="https://portaldoaluno.fatecie.edu.br/login" target="_blank" rel="noopener">Portal do Aluno</a>
+      <div class="portal-area">
+        <a href="https://portaldoaluno.fatecie.edu.br/login" target="_blank" rel="noopener">Portal do Aluno</a>
+        <small>O Termo de Compromisso de Estágio deverá ser protocolado diretamente pelo Portal do Aluno.</small>
+      </div>
     </div>
   </header>
 
@@ -24,7 +27,8 @@
         </div>
       </div>
       <h1>Gerador de Termo de Convênio</h1>
-      <p>Preencha os dados da unidade concedente, baixe o termo preenchido e encaminhe para análise do Setor de Convênios através do e-mail <strong>convenios.ead@fatecie.edu.br</strong></p>
+      <p>Preencha os dados da unidade concedente, baixe o termo preenchido e encaminhe para análise do Setor de Convênios através do e-mail <strong class="email-tooltip" title="Este e-mail é destinado exclusivamente para o recebimento do documento de Termo de Convênio e seus correlatos.
+Caso precise de mais informações ou tenha outras solicitações, utilize o canal oficial de atendimento pelo Portal do Aluno.">convenios.ead@fatecie.edu.br</strong></p>
     </section>
 
     <section class="notice-panel" aria-labelledby="empresasTitle">
@@ -33,38 +37,6 @@
         <p>Antes de solicitar a formalização do convênio, verifique se a empresa já não é parceira da Unifatecie.</p>
       </div>
       <a class="button-link" href="https://estagios.unifatecie.edu.br/empresas-conveniadas/" target="_blank" rel="noopener">Consultar empresas parceiras</a>
-    </section>
-
-    <section class="resources-panel" aria-labelledby="manualTitle">
-      <div class="resources-heading">
-        <h2 id="manualTitle">Tutoriais e materiais de apoio</h2>
-        <p>Use estes materiais quando preferir preencher o termo manualmente ou orientar a pessoa que fará a assinatura digital.</p>
-      </div>
-      <div class="resource-grid">
-        <article class="resource-card">
-          <div>
-            <h3>Preenchimento manual do termo</h3>
-            <p>Passo a passo para preencher corretamente o Termo de Convênio.</p>
-          </div>
-          <video controls preload="metadata" src="materiais/tutorial-preenchimento-termo-convenio.mp4"></video>
-          <a class="resource-link" href="materiais/tutorial-para-convenio.pdf" target="_blank" rel="noopener">Abrir tutorial em PDF</a>
-        </article>
-        <article class="resource-card">
-          <div>
-            <h3>Assinatura do termo</h3>
-            <p>Orientação para assinar o documento na plataforma Clicksign.</p>
-          </div>
-          <video controls preload="metadata" src="materiais/tutorial-assinatura-termo-convenio.mp4"></video>
-          <a class="resource-link" href="materiais/tutorial-assinatura-clicksign.pdf" target="_blank" rel="noopener">Abrir tutorial da Clicksign em PDF</a>
-        </article>
-        <article class="resource-card support-card">
-          <div>
-            <h3>Profissional autônomo</h3>
-            <p>Quando o convênio for com profissional autônomo, além do termo preenchido com CPF, envie também a declaração profissional.</p>
-          </div>
-          <a class="resource-link" href="materiais/declaracao-de-profissional.docx">Baixar declaração de profissional</a>
-        </article>
-      </div>
     </section>
 
     <form id="form" class="card">
@@ -107,75 +79,89 @@
 
       <section class="section">
         <div class="section-title"><span>2</span><div><h2>Dados da unidade concedente</h2></div></div>
-        <div class="choice-group" role="radiogroup" aria-label="Tipo de unidade concedente">
-          <label class="choice-card">
-            <input type="radio" name="tipo_unidade" value="cnpj" checked />
-            <span>Empresa, órgão ou instituição</span>
-            <small>Use esta opção para unidades com CNPJ.</small>
-          </label>
-          <label class="choice-card">
-            <input type="radio" name="tipo_unidade" value="cpf" />
-            <span>Profissional autônomo</span>
-            <small>Use esta opção para unidades com CPF.</small>
-          </label>
-        </div>
+        <div class="field-block">
+          <h3>Dados da empresa</h3>
+          <div class="choice-group" role="radiogroup" aria-label="Tipo de unidade concedente">
+            <label class="choice-card">
+              <input type="radio" name="tipo_unidade" value="cnpj" checked />
+              <span>Empresa, órgão ou instituição</span>
+              <small>Use esta opção para unidades com CNPJ.</small>
+            </label>
+            <label class="choice-card">
+              <input type="radio" name="tipo_unidade" value="cpf" />
+              <span>Profissional autônomo</span>
+              <small>Use esta opção para unidades com CPF.</small>
+            </label>
+          </div>
 
-        <div id="cnpjBox" class="grid cnpj-row">
-          <label>CNPJ *
-            <input id="cnpj" required placeholder="00.000.000/0000-00" />
-          </label>
-          <button type="button" id="buscar">Buscar CNPJ</button>
-        </div>
-        <div id="cpfBox" class="hidden">
-          <div class="grid two">
+          <div id="cnpjBox" class="grid cnpj-row">
+            <label>CNPJ *
+              <input id="cnpj" required placeholder="00.000.000/0000-00" />
+            </label>
+            <button type="button" id="buscar">Buscar CNPJ</button>
+          </div>
+          <div id="cpfBox" class="hidden">
             <label>CPF *
               <input id="cpf" placeholder="000.000.000-00" />
             </label>
-            <div class="warning inline-warning">
-              Profissionais autônomos devem enviar também a
-              <a href="materiais/declaracao-de-profissional.docx">declaração de profissional</a>.
-            </div>
+          </div>
+          <div id="autonomoAviso" class="warning declaration-warning hidden">
+            <p>Caso o parceiro não possua CNPJ, ou seja, quando o profissional trabalha por conta própria (como pessoa física), será necessário também o envio da declaração de profissional.</p>
+            <a class="resource-link" href="materiais/declaracao-de-profissional.docx" data-show-signature-notice="true">Baixar declaração de profissional</a>
+          </div>
+          <div id="msg" class="msg"></div>
+          <div class="grid two">
+            <label><span id="razaoLabel">Razão social *</span>
+              <input id="razao_social" required />
+            </label>
+            <label><span id="alvaraLabel">Alvará de Funcionamento/Sanitário</span>
+              <input id="alvara" />
+            </label>
+            <label>Endereço *
+              <input id="endereco" required />
+            </label>
+            <label>Número *
+              <input id="numero" required />
+            </label>
+            <label>Complemento
+              <input id="complemento" />
+            </label>
+            <label>Bairro *
+              <input id="bairro" required />
+            </label>
+            <label>CEP *
+              <input id="cep" required />
+            </label>
+            <label>Cidade *
+              <input id="cidade" required />
+            </label>
+            <label>Estado *
+              <input id="estado" required />
+            </label>
+            <label>Estimativa de vagas
+              <input id="estimativa_vagas" />
+            </label>
           </div>
         </div>
-        <div id="msg" class="msg"></div>
-        <div class="grid two">
-          <label><span id="razaoLabel">Razão social *</span>
-            <input id="razao_social" required />
-          </label>
-          <label><span id="alvaraLabel">Alvará de Funcionamento/Sanitário</span>
-            <input id="alvara" />
-          </label>
-          <label>Endereço *
-            <input id="endereco" required />
-          </label>
-          <label>Número *
-            <input id="numero" required />
-          </label>
-          <label>Complemento
-            <input id="complemento" />
-          </label>
-          <label>Bairro *
-            <input id="bairro" required />
-          </label>
-          <label>CEP *
-            <input id="cep" required />
-          </label>
-          <label>Cidade *
-            <input id="cidade" required />
-          </label>
-          <label>Estado *
-            <input id="estado" required />
-          </label>
-          <label>Telefone / WhatsApp *
-            <input id="telefone" required />
-            <small>Preferencialmente informar número com WhatsApp para contato.</small>
-          </label>
-          <label>Site ou e-mail da empresa
-            <input id="site" />
-          </label>
-          <label>Estimativa de vagas
-            <input id="estimativa_vagas" />
-          </label>
+
+        <div class="field-block contact-block">
+          <h3>Contatos</h3>
+          <div class="grid two">
+            <label>WhatsApp conforme Receita Federal *
+              <input id="telefone" required />
+              <small>Será preenchido pela consulta de CNPJ quando a Receita Federal disponibilizar a informação.</small>
+            </label>
+            <label>E-mail conforme Receita Federal
+              <input id="site" type="email" />
+              <small>Será preenchido pela consulta de CNPJ quando a Receita Federal disponibilizar a informação.</small>
+            </label>
+            <label>Nome do responsável pelos estágios
+              <input id="responsavel_estagios" />
+            </label>
+            <label>Contato direto desse responsável
+              <input id="contato_responsavel" />
+            </label>
+          </div>
         </div>
       </section>
 
@@ -188,13 +174,16 @@
           </label>
         </div>
 
-        <label class="check">
-          <input type="checkbox" id="outraPessoa" />
-          Outra pessoa irá assinar o documento
-        </label>
+        <div id="outraPessoaBox">
+          <label class="check">
+            <input type="checkbox" id="outraPessoa" />
+            Outra pessoa irá assinar o documento
+          </label>
+        </div>
 
         <div id="avisoCartorio" class="warning hidden">
-          Caso outra pessoa assine, deverá apresentar documento reconhecido em cartório comprovando o vínculo com a empresa, como holerite, procuração, ata de eleição ou documento equivalente.
+          <p>Caso outra pessoa assine em nome da empresa, órgão ou instituição, será necessário apresentar um documento com firma reconhecida em cartório que comprove o vínculo com a empresa (como holerite, procuração, ata de eleição, etc.).</p>
+          <p>Essa regra não se aplica a profissionais autônomos, que devem assinar por conta própria.</p>
         </div>
 
         <div class="grid two">
@@ -214,6 +203,20 @@
         <button type="submit" class="primary">Baixar termo preenchido</button>
       </div>
     </form>
+
+    <section class="resources-panel" aria-labelledby="manualTitle">
+      <div class="resources-heading">
+        <h2 id="manualTitle">Tutoriais e materiais de apoio</h2>
+      </div>
+      <div class="resource-buttons">
+        <a class="resource-link" href="materiais/tutorial-para-convenio.pdf" target="_blank" rel="noopener" data-show-signature-notice="true">📄 Tutorial em PDF: Como conveniar o campo</a>
+        <a class="resource-link" href="materiais/tutorial-para-convenio.pdf" target="_blank" rel="noopener" data-show-signature-notice="true">📄 Tutorial em PDF: Como conveniar o local parceiro</a>
+      </div>
+      <div class="clicksign-notice">
+        <p>Caso o parceiro tenha dificuldades em realizar a assinatura do termo via plataforma Clicksign, preparamos esse tutorial com orientações.</p>
+        <a class="resource-link" href="materiais/tutorial-assinatura-clicksign.pdf" target="_blank" rel="noopener" data-show-signature-notice="true">📄 Tutorial Clicksign</a>
+      </div>
+    </section>
   </main>
 
   <footer class="footer">
@@ -229,6 +232,34 @@
       <div class="loading-spinner"></div>
       <h3 id="loadingTitle">Gerando documento</h3>
       <p id="loadingText">Aguarde alguns instantes. Não feche esta página.</p>
+    </div>
+  </div>
+
+  <div id="signatureNoticeModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="signatureNoticeTitle">
+    <div class="modal-card">
+      <button type="button" class="modal-close" id="signatureNoticeClose" aria-label="Fechar aviso">×</button>
+      <h2 id="signatureNoticeTitle">📌 Formas de assinatura aceitas</h2>
+      <p>Atualmente, aceitamos duas formas de assinatura:</p>
+      <h3>1️⃣ Assinatura digital (recomendada)</h3>
+      <p>Pode ser realizada por meio de:</p>
+      <ul>
+        <li>Gov.br</li>
+        <li>Certificado digital</li>
+      </ul>
+      <p>Nesse caso, o responsável (proprietário, sócio ou representante legal) realiza a assinatura digital, que já possui validade jurídica, sem necessidade de reconhecimento em cartório.</p>
+      <p>Após a assinatura, o documento pode ser enviado em PDF.</p>
+      <hr />
+      <h3>2️⃣ Assinatura manual (no papel)</h3>
+      <p>Procedimento:</p>
+      <ul>
+        <li>Imprimir o documento</li>
+        <li>Assinar manualmente</li>
+        <li>Realizar reconhecimento de firma em cartório</li>
+        <li>Digitalizar e enviar em um único arquivo PDF</li>
+      </ul>
+      <p><strong>⚠️ Atenção:</strong> Documentos assinados manualmente sem reconhecimento de firma não possuem validade.</p>
+      <p><strong>Responsável pela assinatura:</strong> O documento deve ser assinado pelo proprietário, sócio ou responsável legal.</p>
+      <p>Caso outra pessoa assine, será necessário apresentar documento que comprove vínculo com a empresa (como contrato social, procuração, holerite ou declaração).</p>
     </div>
   </div>
 

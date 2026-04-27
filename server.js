@@ -79,6 +79,14 @@ function checkCurso(curso, nome) {
   return normalizarTexto(curso) === normalizarTexto(nome) ? "X" : " ";
 }
 
+function montarContatoEmpresa(d) {
+  return [
+    d.site || "",
+    d.responsavel_estagios ? `Responsável pelos estágios: ${d.responsavel_estagios}` : "",
+    d.contato_responsavel ? `Contato direto do responsável: ${d.contato_responsavel}` : ""
+  ].filter(Boolean).join("\n");
+}
+
 function hashSenhaWordLegacy(password) {
   // Hash legado do Word para proteção de edição em documentProtection.
   // Senha configurada neste projeto: "convenios".
@@ -230,7 +238,9 @@ app.post("/api/gerar", (req, res) => {
       cidade: d.cidade || "",
       estado: d.estado || "",
       telefone: d.telefone || "",
-      site: d.site || "",
+      site: montarContatoEmpresa(d),
+      responsavel_estagios: d.responsavel_estagios || "",
+      contato_responsavel: d.contato_responsavel || "",
       representante: d.representante || "",
       cargo: d.cargo || "",
       email_assinatura: d.email_assinatura || "",

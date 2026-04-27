@@ -38,6 +38,30 @@ function esconderLoading(){
   if (overlay) overlay.classList.add("hidden");
 }
 
+function mostrarAvisoAssinatura(){
+  const modal = el("signatureNoticeModal");
+  if (!modal) return;
+  modal.classList.remove("hidden");
+}
+
+function fecharAvisoAssinatura(){
+  const modal = el("signatureNoticeModal");
+  if (modal) modal.classList.add("hidden");
+}
+
+el("signatureNoticeClose")?.addEventListener("click", fecharAvisoAssinatura);
+el("signatureNoticeModal")?.addEventListener("click", e => {
+  if (e.target === el("signatureNoticeModal")) fecharAvisoAssinatura();
+});
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape") fecharAvisoAssinatura();
+});
+
+document.querySelectorAll("[data-show-signature-notice]").forEach(link => {
+  link.addEventListener("click", () => {
+    setTimeout(mostrarAvisoAssinatura, 250);
+  });
+});
 
 function atualizarCampoOutroCurso(){
   const box = el("outroCursoBox");
@@ -61,10 +85,14 @@ function atualizarTipoUnidade(){
   const buscar = el("buscar");
   const razaoLabel = el("razaoLabel");
   const alvaraLabel = el("alvaraLabel");
+  const autonomoAviso = el("autonomoAviso");
+  const outraPessoaBox = el("outraPessoaBox");
   const msg = el("msg");
 
   cnpjBox?.classList.toggle("hidden", profissional);
   cpfBox?.classList.toggle("hidden", !profissional);
+  autonomoAviso?.classList.toggle("hidden", !profissional);
+  outraPessoaBox?.classList.toggle("hidden", profissional);
   if (cnpj) cnpj.required = !profissional;
   if (cpf) cpf.required = profissional;
   if (buscar) buscar.disabled = profissional;
@@ -177,7 +205,7 @@ el("form").addEventListener("submit", async (e) => {
   const ids = [
     "tipo_estagio","curso","outro_curso","cnpj","cpf","razao_social","alvara","estimativa_vagas",
     "endereco","numero","complemento","bairro","cep","cidade","estado",
-    "telefone","site","representante","cargo","email_assinatura"
+    "telefone","site","responsavel_estagios","contato_responsavel","representante","cargo","email_assinatura"
   ];
 
   const dados = {};
@@ -215,6 +243,7 @@ el("form").addEventListener("submit", async (e) => {
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
+    mostrarAvisoAssinatura();
   } catch (e) {
     alert("Erro ao gerar documento. Tente novamente em alguns instantes.");
   } finally {
