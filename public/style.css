@@ -147,8 +147,59 @@ h1{
 .hero strong{color:#fff}
 
 .email-tooltip{
+  position:relative;
+  display:inline-block;
   cursor:help;
   border-bottom:1px dotted rgba(255,255,255,.82);
+}
+
+.email-tooltip::after{
+  content:attr(data-tooltip);
+  position:absolute;
+  left:50%;
+  bottom:calc(100% + 12px);
+  z-index:30;
+  width:min(420px, 82vw);
+  padding:12px 14px;
+  border-radius:8px;
+  background:#fff;
+  color:#313337;
+  box-shadow:0 12px 32px rgba(0,0,0,.24);
+  font-size:13px;
+  font-weight:700;
+  line-height:1.45;
+  text-align:left;
+  opacity:0;
+  pointer-events:none;
+  transform:translate(-50%,6px);
+  transition:opacity .16s ease, transform .16s ease;
+}
+
+.email-tooltip::before{
+  content:"";
+  position:absolute;
+  left:50%;
+  bottom:calc(100% + 5px);
+  z-index:31;
+  border:7px solid transparent;
+  border-top-color:#fff;
+  opacity:0;
+  pointer-events:none;
+  transform:translateX(-50%);
+  transition:opacity .16s ease;
+}
+
+.email-tooltip:hover::after,
+.email-tooltip:focus::after,
+.email-tooltip:hover::before,
+.email-tooltip:focus::before{
+  opacity:1;
+  transform:translate(-50%,0);
+}
+
+.email-tooltip:hover::before,
+.email-tooltip:focus::before{
+  transform:translateX(-50%);
 }
 
 .card{
@@ -255,6 +306,20 @@ h1{
   gap:14px;
 }
 
+.tutorial-block + .tutorial-block{
+  margin-top:22px;
+  padding-top:20px;
+  border-top:1px solid #edf0f3;
+}
+
+.tutorial-block h3{
+  margin:0 0 12px;
+  color:#313337;
+  font-size:19px;
+  line-height:1.25;
+  letter-spacing:0;
+}
+
 .resource-link{
   align-self:flex-start;
   padding:11px 15px;
@@ -263,7 +328,7 @@ h1{
 }
 
 .clicksign-notice{
-  margin-top:18px;
+  margin-top:0;
   padding:16px;
   display:flex;
   align-items:center;
@@ -358,12 +423,12 @@ h1{
 }
 
 .choice-card{
-  min-height:86px;
+  min-height:62px;
   padding:15px 16px;
   display:grid;
   grid-template-columns:auto minmax(0,1fr);
   column-gap:11px;
-  align-items:start;
+  align-items:center;
   border:1px solid #d9dde2;
   border-radius:8px;
   background:#fff;
@@ -378,7 +443,7 @@ h1{
 .choice-card input{
   width:auto;
   min-height:0;
-  margin:3px 0 0;
+  margin:0;
   accent-color:var(--laranja);
 }
 

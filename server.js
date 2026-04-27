@@ -214,27 +214,19 @@ function hashSenhaWordLegacy(password) {
 function protegerDocumentoInteiro(buffer) {
   const zip = new PizZip(buffer);
 
-  const protectionTag =
-    `<w:documentProtection w:edit="readOnly" w:enforcement="1" w:formatting="0"/>`;
-
   let settings = zip.file("word/settings.xml")
     ? zip.file("word/settings.xml").asText()
     : `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <w:settings xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"></w:settings>`;
   settings = corrigirSettings(settings);
 
-  // Remove qualquer proteção anterior para evitar duplicidade.
+  // Remove proteções anteriores. O Word estava exibindo alerta de reparo em alguns ambientes
+  // quando o documento era entregue com proteção OOXML aplicada pelo servidor.
   settings = settings.replace(/<w:documentProtection\b[^>]*\/>/g, "");
   settings = settings.replace(/<w:documentProtection\b[\s\S]*?<\/w:documentProtection>/g, "");
-
-  if (settings.includes("</w:settings>")) {
-    settings = inserirProtecaoDocumento(settings, protectionTag);
-  } else {
-    settings += protectionTag;
-  }
   zip.file("word/settings.xml", settings);
 
-  // Remove áreas editáveis anteriores. Assim, o documento inteiro fica bloqueado.
+  // Remove marcas de permissão herdadas dos modelos e corrige compatibilidade OpenXML.
   let xml = zip.file("word/document.xml").asText();
   xml = corrigirCompatibilidadeDocumento(xml);
   xml = removerAtributosInvalidosTblLook(xml);
