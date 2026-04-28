@@ -3,6 +3,7 @@ const express = require("express");
 const cors = require("cors");
 const path = require("path");
 const fs = require("fs");
+const { execFileSync } = require("child_process");
 const PizZip = require("pizzip");
 const Docxtemplater = require("docxtemplater");
 
@@ -12,7 +13,6 @@ app.use(express.json({ limit: "2mb" }));
 app.use(express.static(path.join(__dirname, "public")));
 
 const PORT = process.env.PORT || 3000;
-const SENHA_PROTECAO = "convenios";
 
 const cursosObrigatorios = [
   "Biomedicina",
@@ -129,89 +129,7 @@ function corrigirSettings(settings) {
   );
 }
 
-function inserirProtecaoDocumento(settings, protectionTag) {
-  const marcadoresPosteriores = [
-    "autoFormatOverride",
-    "styleLockTheme",
-    "styleLockQFSet",
-    "defaultTabStop",
-    "autoHyphenation",
-    "consecutiveHyphenLimit",
-    "hyphenationZone",
-    "doNotHyphenateCaps",
-    "characterSpacingControl",
-    "printTwoOnOne",
-    "strictFirstAndLastChars",
-    "noLineBreaksAfter",
-    "noLineBreaksBefore",
-    "savePreviewPicture",
-    "doNotValidateAgainstSchema",
-    "saveInvalidXml",
-    "ignoreMixedContent",
-    "alwaysShowPlaceholderText",
-    "doNotDemarcateInvalidXml",
-    "saveXmlDataOnly",
-    "useXSLTWhenSaving",
-    "saveThroughXslt",
-    "showXMLTags",
-    "alwaysMergeEmptyNamespace",
-    "updateFields",
-    "hdrShapeDefaults",
-    "footnotePr",
-    "endnotePr",
-    "compat",
-    "docVars",
-    "rsids",
-    "mathPr",
-    "uiCompat97To2003",
-    "attachedSchema",
-    "themeFontLang",
-    "clrSchemeMapping",
-    "doNotIncludeSubdocsInStats",
-    "doNotAutoCompressPictures",
-    "forceUpgrade",
-    "captions",
-    "readModeInkLockDown",
-    "smartTagType",
-    "shapeDefaults",
-    "doNotEmbedSmartTags",
-    "decimalSymbol",
-    "listSeparator"
-  ];
-
-  let melhorIndice = -1;
-  for (const nome of marcadoresPosteriores) {
-    const indice = settings.search(new RegExp(`<w:${nome}\\b`));
-    if (indice !== -1 && (melhorIndice === -1 || indice < melhorIndice)) {
-      melhorIndice = indice;
-    }
-  }
-
-  if (melhorIndice !== -1) {
-    return `${settings.slice(0, melhorIndice)}${protectionTag}${settings.slice(melhorIndice)}`;
-  }
-  return settings.replace("</w:settings>", `${protectionTag}</w:settings>`);
-}
-
-function hashSenhaWordLegacy(password) {
-  // Hash legado do Word para proteção de edição em documentProtection.
-  // Senha configurada neste projeto: "convenios".
-  let hash = 0;
-  const senha = String(password || "");
-  for (let i = senha.length - 1; i >= 0; i--) {
-    hash = ((hash >> 14) & 0x0001) | ((hash << 1) & 0x7fff);
-    hash ^= senha.charCodeAt(i);
-  }
-  hash = ((hash >> 14) & 0x0001) | ((hash << 1) & 0x7fff);
-  hash ^= senha.length;
-  hash ^= 0xCE4B;
-  return (hash & 0xffff).toString(16).toUpperCase().padStart(4, "0");
-}
-
-
-
-
-function protegerDocumentoInteiro(buffer) {
+function prepararDocumentoWord(buffer) {
   const zip = new PizZip(buffer);
 
   let settings = zip.file("word/settings.xml")
@@ -235,6 +153,87 @@ function protegerDocumentoInteiro(buffer) {
   zip.file("word/document.xml", xml);
 
   return zip.generate({ type: "nodebuffer", compression: "DEFLATE" });
+}
+
+function criarDiretorioTemporario() {
+  const base = path.join(__dirname, "tmp");
+  fs.mkdirSync(base, { recursive: true });
+  return fs.mkdtempSync(path.join(base, "termo-"));
+}
+
+function caminhoPowerShell() {
+  const systemRoot = process.env.SystemRoot || "C:\\Windows";
+  const caminhoPadrao = path.join(systemRoot, "System32", "WindowsPowerShell", "v1.0", "powershell.exe");
+  return fs.existsSync(caminhoPadrao) ? caminhoPadrao : "powershell.exe";
+}
+
+function converterDocxParaPdf(buffer) {
+  const tempDir = criarDiretorioTemporario();
+  const docxPath = path.join(tempDir, "termo.docx");
+  const pdfPath = path.join(tempDir, "termo.pdf");
+  const scriptPath = path.join(tempDir, "converter-docx-pdf.ps1");
+
+  const psScript = `
+param(
+  [Parameter(Mandatory=$true)][string]$DocxPath,
+  [Parameter(Mandatory=$true)][string]$PdfPath
+)
+
+$ErrorActionPreference = "Stop"
+$word = $null
+$documento = $null
+
+try {
+  $word = New-Object -ComObject Word.Application
+  $word.Visible = $false
+  $word.DisplayAlerts = 0
+
+  $documento = $word.Documents.Open([ref]$DocxPath, [ref]$false, [ref]$true)
+  $documento.ExportAsFixedFormat($PdfPath, 17, $false, 0, 0, 1, 1, 0, $true, $true, 0, $true, $true, $false)
+} finally {
+  if ($documento -ne $null) {
+    $documento.Close([ref]$false) | Out-Null
+  }
+  if ($word -ne $null) {
+    $word.Quit() | Out-Null
+  }
+}
+`;
+
+  try {
+    fs.writeFileSync(docxPath, buffer);
+    fs.writeFileSync(scriptPath, psScript, "utf8");
+
+    execFileSync(caminhoPowerShell(), [
+      "-NoProfile",
+      "-ExecutionPolicy",
+      "Bypass",
+      "-File",
+      scriptPath,
+      "-DocxPath",
+      docxPath,
+      "-PdfPath",
+      pdfPath
+    ], {
+      timeout: 120000,
+      windowsHide: true
+    });
+
+    if (!fs.existsSync(pdfPath)) {
+      throw new Error("O Word não retornou o arquivo PDF.");
+    }
+
+    return fs.readFileSync(pdfPath);
+  } catch (e) {
+    const detalhe = e.stderr ? e.stderr.toString("utf8").trim() : e.message;
+    throw new Error(`Não foi possível converter o termo para PDF. ${detalhe}`);
+  } finally {
+    try {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    } catch (_) {
+      // Se o Word ainda estiver liberando algum arquivo, a pasta temporária será ignorada.
+    }
+  }
 }
 
 
@@ -368,17 +367,18 @@ app.post("/api/gerar", (req, res) => {
       compression: "DEFLATE"
     });
 
-    const protectedBuffer = protegerDocumentoInteiro(buffer);
+    const documentoWord = prepararDocumentoWord(buffer);
+    const pdfBuffer = converterDocxParaPdf(documentoWord);
 
     const nomeLocal = limparNomeArquivo(d.razao_social || d.nome_fantasia || "LOCAL");
-    const filename = `${nomeLocal} - TERMO DE CONVÊNIO.docx`;
+    const filename = `${nomeLocal} - TERMO DE CONVÊNIO.pdf`;
 
-    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+    res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `attachment; filename="${encodeURIComponent(filename)}"; filename*=UTF-8''${encodeURIComponent(filename)}`);
-    res.send(protectedBuffer);
+    res.send(pdfBuffer);
   } catch (e) {
     console.error(e);
-    res.status(500).json({ erro: "Erro ao gerar documento.", detalhe: e.message });
+    res.status(500).json({ erro: "Erro ao gerar PDF.", detalhe: e.message });
   }
 });
 

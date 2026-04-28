@@ -1,7 +1,7 @@
 {
   "name": "gerador-convenio-unifatecie",
   "version": "22.0.0",
-  "description": "Gerador de Termo de Convênio UniFatecie - Word preenchido e totalmente protegido",
+  "description": "Gerador de Termo de Convênio UniFatecie - PDF preenchido para assinatura",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"

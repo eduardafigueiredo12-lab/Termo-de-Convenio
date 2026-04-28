@@ -209,7 +209,7 @@ el("form").addEventListener("submit", async (e) => {
     dados.cnpj = dados.cpf;
   }
 
-  mostrarLoading("Gerando documento", "Estamos preparando o Termo de Convênio. Aguarde alguns instantes.");
+  mostrarLoading("Gerando PDF", "Estamos preparando o Termo de Convênio em PDF. Aguarde alguns instantes.");
 
   try {
     const resp = await fetch("/api/gerar", {
@@ -219,14 +219,14 @@ el("form").addEventListener("submit", async (e) => {
     });
 
     if (!resp.ok) {
-      const erro = await resp.json().catch(()=>({erro:"Erro ao gerar documento."}));
-      alert(erro.erro || "Erro ao gerar documento.");
+      const erro = await resp.json().catch(()=>({erro:"Erro ao gerar PDF."}));
+      alert(erro.erro || "Erro ao gerar PDF.");
       return;
     }
 
     const blob = await resp.blob();
     const cd = resp.headers.get("Content-Disposition") || "";
-    let filename = "TERMO DE CONVÊNIO.docx";
+    let filename = "TERMO DE CONVÊNIO.pdf";
     const match = cd.match(/filename\*=UTF-8''([^;]+)/);
     if (match) filename = decodeURIComponent(match[1]);
     const a = document.createElement("a");
@@ -239,7 +239,7 @@ el("form").addEventListener("submit", async (e) => {
     URL.revokeObjectURL(url);
     mostrarAvisoAssinatura();
   } catch (e) {
-    alert("Erro ao gerar documento. Tente novamente em alguns instantes.");
+    alert("Erro ao gerar PDF. Tente novamente em alguns instantes.");
   } finally {
     esconderLoading();
   }
