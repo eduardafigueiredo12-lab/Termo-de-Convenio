@@ -297,6 +297,7 @@ h1{
   color:var(--muted);
   font-size:16px;
   line-height:1.5;
+  font-weight:700;
 }
 
 .resource-buttons{
@@ -327,6 +328,10 @@ h1{
   color:#fff;
 }
 
+.student-tutorial-buttons{
+  margin-bottom:14px;
+}
+
 .clicksign-notice{
   margin-top:0;
   padding:16px;
@@ -337,6 +342,14 @@ h1{
   border:1px solid #e5e7eb;
   border-radius:8px;
   background:#fbfcfd;
+}
+
+.clicksign-notice strong{
+  display:block;
+  margin-bottom:6px;
+  color:#313337;
+  font-size:15px;
+  line-height:1.35;
 }
 
 .clicksign-notice p{

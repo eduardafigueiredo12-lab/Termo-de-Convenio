@@ -57,12 +57,6 @@ document.addEventListener("keydown", e => {
   if (e.key === "Escape") fecharAvisoAssinatura();
 });
 
-document.querySelectorAll("[data-show-signature-notice]").forEach(link => {
-  link.addEventListener("click", () => {
-    setTimeout(mostrarAvisoAssinatura, 250);
-  });
-});
-
 function atualizarCampoOutroCurso(){
   const box = el("outroCursoBox");
   const input = el("outro_curso");
