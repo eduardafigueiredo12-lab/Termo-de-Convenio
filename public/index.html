@@ -40,44 +40,7 @@
 
     <form id="form" class="card">
       <section class="section">
-        <div class="section-title"><span>1</span><div><h2>Tipo de estágio e curso</h2></div></div>
-        <div class="grid two">
-          <label>Tipo de estágio *
-            <select id="tipo_estagio" required>
-              <option value="">Selecione...</option>
-              <option>Estágio obrigatório</option>
-              <option>Estágio remunerado</option>
-            </select>
-          </label>
-          <label>Curso *
-            <select id="curso" required>
-              <option value="">Selecione...</option>
-              <option>Biomedicina</option>
-              <option>Farmácia</option>
-              <option>Fonoaudiologia</option>
-              <option>Fisioterapia</option>
-              <option>Nutrição</option>
-              <option>Terapia Ocupacional</option>
-              <option>Radiologia</option>
-              <option>Técnicas Oftálmicas</option>
-              <option>Pós em Procedimentos Injetáveis</option>
-              <option>Engenharias</option>
-              <option>Licenciaturas</option>
-              <option>Técnico em Enfermagem</option>
-              <option>Técnico em Transações Imobiliárias</option>
-              <option>Outro</option>
-            </select>
-          </label>
-        </div>
-        <div id="outroCursoBox" class="hidden outro-curso">
-          <label>Informe o curso *
-            <input id="outro_curso" placeholder="Digite o nome do curso" />
-          </label>
-        </div>
-      </section>
-
-      <section class="section">
-        <div class="section-title"><span>2</span><div><h2>Dados da unidade concedente</h2></div></div>
+        <div class="section-title"><span>1</span><div><h2>Dados da Empresa</h2></div></div>
         <div class="field-block">
           <h3>Dados da empresa</h3>
           <div class="choice-group" role="radiogroup" aria-label="Tipo de unidade concedente">
@@ -160,7 +123,7 @@
       </section>
 
       <section class="section">
-        <div class="section-title"><span>3</span><div><h2>Responsável pela assinatura</h2><p>O responsável deve ser, preferencialmente, proprietário ou sócio do estabelecimento.</p></div></div>
+        <div class="section-title"><span>2</span><div><h2>Responsável Legal</h2><p>O responsável deve ser, preferencialmente, proprietário ou sócio do estabelecimento.</p></div></div>
 
         <div id="sociosBox" class="socios hidden">
           <label>Selecionar sócio/administrador
@@ -190,6 +153,46 @@
           <label>E-mail para assinatura digital *
             <input id="email_assinatura" type="email" required />
           </label>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-title"><span>3</span><div><h2>Informações do Convênio</h2></div></div>
+        <div class="field-block">
+          <h3>Tipo de estágio e curso</h3>
+          <div class="grid two">
+            <label>Tipo de estágio *
+              <select id="tipo_estagio" required>
+                <option value="">Selecione...</option>
+                <option>Estágio obrigatório</option>
+                <option>Estágio remunerado</option>
+              </select>
+            </label>
+            <label>Curso *
+              <select id="curso" required>
+                <option value="">Selecione...</option>
+                <option>Biomedicina</option>
+                <option>Farmácia</option>
+                <option>Fonoaudiologia</option>
+                <option>Fisioterapia</option>
+                <option>Nutrição</option>
+                <option>Terapia Ocupacional</option>
+                <option>Radiologia</option>
+                <option>Técnicas Oftálmicas</option>
+                <option>Pós em Procedimentos Injetáveis</option>
+                <option>Engenharias</option>
+                <option>Licenciaturas</option>
+                <option>Técnico em Enfermagem</option>
+                <option>Técnico em Transações Imobiliárias</option>
+                <option>Outro</option>
+              </select>
+            </label>
+          </div>
+          <div id="outroCursoBox" class="hidden outro-curso">
+            <label>Informe o curso *
+              <input id="outro_curso" placeholder="Digite o nome do curso" />
+            </label>
+          </div>
         </div>
       </section>
 

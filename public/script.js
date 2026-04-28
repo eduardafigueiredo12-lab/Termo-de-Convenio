@@ -96,7 +96,10 @@ function atualizarTipoUnidade(){
   if (buscar) buscar.disabled = profissional;
   if (razaoLabel) razaoLabel.textContent = profissional ? "Nome completo do profissional *" : "Razão social *";
   if (alvaraLabel) alvaraLabel.textContent = profissional ? "Registro profissional / alvará (se houver)" : "Alvará de Funcionamento/Sanitário";
-  if (msg) msg.textContent = "";
+  if (msg) {
+    msg.textContent = "";
+    msg.className = "msg";
+  }
 
   if (profissional) {
     sociosEncontrados = [];
@@ -171,9 +174,11 @@ el("buscar").addEventListener("click", async () => {
   const cnpj = somenteNumeros(el("cnpj").value);
   const msg = el("msg");
   if (cnpj.length !== 14) {
+    msg.className = "msg error";
     msg.textContent = "Informe um CNPJ válido.";
     return;
   }
+  msg.className = "msg info";
   msg.textContent = "Consultando CNPJ...";
   mostrarLoading("Consultando CNPJ", "Buscando os dados da unidade concedente. Aguarde...");
   try {
@@ -181,16 +186,23 @@ el("buscar").addEventListener("click", async () => {
     const dados = await r.json();
     if (!r.ok) throw new Error(dados.erro || "Erro ao consultar CNPJ.");
     preencher(dados);
+    msg.className = "msg success";
     msg.textContent = "Dados localizados. Confira as informações antes de baixar o termo.";
   } catch (e) {
+    msg.className = "msg error";
     msg.textContent = e.message || "Não foi possível consultar o CNPJ. Preencha manualmente.";
   } finally {
     esconderLoading();
   }
 });
 
+el("form").addEventListener("invalid", e => {
+  e.currentTarget.classList.add("was-validated");
+}, true);
+
 el("form").addEventListener("submit", async (e) => {
   e.preventDefault();
+  e.currentTarget.classList.add("was-validated");
 
   const tipoUnidade = tipoUnidadeSelecionado();
   if (tipoUnidade === "cpf" && somenteNumeros(el("cpf").value).length !== 11) {
