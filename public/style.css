@@ -306,6 +306,22 @@ h1{
   flex-wrap:wrap;
   gap:14px;
 }
+.clicksign-tutorial-row{
+  display:flex;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:12px;
+  margin-bottom:14px;
+}
+
+.clicksign-tutorial-row p{
+  max-width:620px;
+  margin:0;
+  color:var(--muted);
+  font-size:14px;
+  line-height:1.4;
+  font-weight:700;
+}
 
 .tutorial-block + .tutorial-block{
   margin-top:22px;
