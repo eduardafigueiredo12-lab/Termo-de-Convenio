@@ -3,7 +3,7 @@ const express = require("express");
 const cors = require("cors");
 const path = require("path");
 const fs = require("fs");
-const { execFileSync } = require("child_process");
+const crypto = require("crypto");
 const PizZip = require("pizzip");
 const Docxtemplater = require("docxtemplater");
 
@@ -13,6 +13,8 @@ app.use(express.json({ limit: "2mb" }));
 app.use(express.static(path.join(__dirname, "public")));
 
 const PORT = process.env.PORT || 3000;
+const SENHA_PROTECAO_DOCUMENTO = process.env.DOCX_PROTECTION_PASSWORD || "convenios";
+const PROTECAO_SPIN_COUNT = 100000;
 
 const cursosObrigatorios = [
   "Biomedicina",
@@ -129,6 +131,43 @@ function corrigirSettings(settings) {
   );
 }
 
+function gerarHashProtecaoDocumento(senha, salt) {
+  let hash = crypto
+    .createHash("sha1")
+    .update(Buffer.concat([salt, Buffer.from(String(senha || ""), "utf16le")]))
+    .digest();
+
+  for (let i = 0; i < PROTECAO_SPIN_COUNT; i++) {
+    const contador = Buffer.alloc(4);
+    contador.writeUInt32LE(i, 0);
+    hash = crypto.createHash("sha1").update(Buffer.concat([hash, contador])).digest();
+  }
+
+  return hash.toString("base64");
+}
+
+function aplicarProtecaoSomenteLeitura(settings) {
+  const salt = crypto.randomBytes(16);
+  const protection = [
+    '<w:documentProtection',
+    ' w:edit="readOnly"',
+    ' w:enforcement="1"',
+    ' w:formatting="0"',
+    ' w:cryptProviderType="rsaFull"',
+    ' w:cryptAlgorithmClass="hash"',
+    ' w:cryptAlgorithmType="typeAny"',
+    ' w:cryptAlgorithmSid="4"',
+    ` w:cryptSpinCount="${PROTECAO_SPIN_COUNT}"`,
+    ` w:hash="${gerarHashProtecaoDocumento(SENHA_PROTECAO_DOCUMENTO, salt)}"`,
+    ` w:salt="${salt.toString("base64")}"`,
+    '/>'
+  ].join("");
+
+  settings = settings.replace(/<w:documentProtection\b[^>]*\/>/g, "");
+  settings = settings.replace(/<w:documentProtection\b[\s\S]*?<\/w:documentProtection>/g, "");
+  return settings.replace(/(<w:settings\b[^>]*>)/, `$1${protection}`);
+}
+
 function prepararDocumentoWord(buffer) {
   const zip = new PizZip(buffer);
 
@@ -138,10 +177,8 @@ function prepararDocumentoWord(buffer) {
 <w:settings xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"></w:settings>`;
   settings = corrigirSettings(settings);
 
-  // Remove proteções anteriores. O Word estava exibindo alerta de reparo em alguns ambientes
-  // quando o documento era entregue com proteção OOXML aplicada pelo servidor.
-  settings = settings.replace(/<w:documentProtection\b[^>]*\/>/g, "");
-  settings = settings.replace(/<w:documentProtection\b[\s\S]*?<\/w:documentProtection>/g, "");
+  // Aplica restricao de edicao do Word com senha para desbloqueio.
+  settings = aplicarProtecaoSomenteLeitura(settings);
   zip.file("word/settings.xml", settings);
 
   // Remove marcas de permissão herdadas dos modelos e corrige compatibilidade OpenXML.
@@ -154,88 +191,6 @@ function prepararDocumentoWord(buffer) {
 
   return zip.generate({ type: "nodebuffer", compression: "DEFLATE" });
 }
-
-function criarDiretorioTemporario() {
-  const base = path.join(__dirname, "tmp");
-  fs.mkdirSync(base, { recursive: true });
-  return fs.mkdtempSync(path.join(base, "termo-"));
-}
-
-function caminhoPowerShell() {
-  const systemRoot = process.env.SystemRoot || "C:\\Windows";
-  const caminhoPadrao = path.join(systemRoot, "System32", "WindowsPowerShell", "v1.0", "powershell.exe");
-  return fs.existsSync(caminhoPadrao) ? caminhoPadrao : "powershell.exe";
-}
-
-function converterDocxParaPdf(buffer) {
-  const tempDir = criarDiretorioTemporario();
-  const docxPath = path.join(tempDir, "termo.docx");
-  const pdfPath = path.join(tempDir, "termo.pdf");
-  const scriptPath = path.join(tempDir, "converter-docx-pdf.ps1");
-
-  const psScript = `
-param(
-  [Parameter(Mandatory=$true)][string]$DocxPath,
-  [Parameter(Mandatory=$true)][string]$PdfPath
-)
-
-$ErrorActionPreference = "Stop"
-$word = $null
-$documento = $null
-
-try {
-  $word = New-Object -ComObject Word.Application
-  $word.Visible = $false
-  $word.DisplayAlerts = 0
-
-  $documento = $word.Documents.Open([ref]$DocxPath, [ref]$false, [ref]$true)
-  $documento.ExportAsFixedFormat($PdfPath, 17, $false, 0, 0, 1, 1, 0, $true, $true, 0, $true, $true, $false)
-} finally {
-  if ($documento -ne $null) {
-    $documento.Close([ref]$false) | Out-Null
-  }
-  if ($word -ne $null) {
-    $word.Quit() | Out-Null
-  }
-}
-`;
-
-  try {
-    fs.writeFileSync(docxPath, buffer);
-    fs.writeFileSync(scriptPath, psScript, "utf8");
-
-    execFileSync(caminhoPowerShell(), [
-      "-NoProfile",
-      "-ExecutionPolicy",
-      "Bypass",
-      "-File",
-      scriptPath,
-      "-DocxPath",
-      docxPath,
-      "-PdfPath",
-      pdfPath
-    ], {
-      timeout: 120000,
-      windowsHide: true
-    });
-
-    if (!fs.existsSync(pdfPath)) {
-      throw new Error("O Word não retornou o arquivo PDF.");
-    }
-
-    return fs.readFileSync(pdfPath);
-  } catch (e) {
-    const detalhe = e.stderr ? e.stderr.toString("utf8").trim() : e.message;
-    throw new Error(`Não foi possível converter o termo para PDF. ${detalhe}`);
-  } finally {
-    try {
-      fs.rmSync(tempDir, { recursive: true, force: true });
-    } catch (_) {
-      // Se o Word ainda estiver liberando algum arquivo, a pasta temporária será ignorada.
-    }
-  }
-}
-
 
 async function fetchJson(url) {
   const controller = new AbortController();
@@ -368,17 +323,16 @@ app.post("/api/gerar", (req, res) => {
     });
 
     const documentoWord = prepararDocumentoWord(buffer);
-    const pdfBuffer = converterDocxParaPdf(documentoWord);
 
     const nomeLocal = limparNomeArquivo(d.razao_social || d.nome_fantasia || "LOCAL");
-    const filename = `${nomeLocal} - TERMO DE CONVÊNIO.pdf`;
+    const filename = `${nomeLocal} - TERMO DE CONVENIO.docx`;
 
-    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
     res.setHeader("Content-Disposition", `attachment; filename="${encodeURIComponent(filename)}"; filename*=UTF-8''${encodeURIComponent(filename)}`);
-    res.send(pdfBuffer);
+    res.send(documentoWord);
   } catch (e) {
     console.error(e);
-    res.status(500).json({ erro: "Erro ao gerar PDF.", detalhe: e.message });
+    res.status(500).json({ erro: "Erro ao gerar arquivo.", detalhe: e.message });
   }
 });
 

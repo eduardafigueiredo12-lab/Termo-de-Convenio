@@ -6,6 +6,10 @@ function tipoUnidadeSelecionado(){
   return document.querySelector("input[name='tipo_unidade']:checked")?.value || "cnpj";
 }
 
+function apiUrl(caminho){
+  return window.location.protocol === "file:" ? `http://localhost:3000${caminho}` : caminho;
+}
+
 function mascararCpf(v){
   const n = somenteNumeros(v).slice(0, 11);
   return n
@@ -173,7 +177,7 @@ el("buscar").addEventListener("click", async () => {
   msg.textContent = "Consultando CNPJ...";
   mostrarLoading("Consultando CNPJ", "Buscando os dados da unidade concedente. Aguarde...");
   try {
-    const r = await fetch(`/api/cnpj/${cnpj}`);
+    const r = await fetch(apiUrl(`/api/cnpj/${cnpj}`));
     const dados = await r.json();
     if (!r.ok) throw new Error(dados.erro || "Erro ao consultar CNPJ.");
     preencher(dados);
@@ -209,24 +213,24 @@ el("form").addEventListener("submit", async (e) => {
     dados.cnpj = dados.cpf;
   }
 
-  mostrarLoading("Gerando PDF", "Estamos preparando o Termo de Convênio em PDF. Aguarde alguns instantes.");
+  mostrarLoading("Gerando arquivo", "Estamos preparando o Termo de Convenio em Word. Aguarde alguns instantes.");
 
   try {
-    const resp = await fetch("/api/gerar", {
+    const resp = await fetch(apiUrl("/api/gerar"), {
       method:"POST",
       headers:{ "Content-Type":"application/json" },
       body: JSON.stringify(dados)
     });
 
     if (!resp.ok) {
-      const erro = await resp.json().catch(()=>({erro:"Erro ao gerar PDF."}));
-      alert(erro.erro || "Erro ao gerar PDF.");
+      const erro = await resp.json().catch(()=>({erro:"Erro ao gerar arquivo."}));
+      alert(erro.erro || "Erro ao gerar arquivo.");
       return;
     }
 
     const blob = await resp.blob();
     const cd = resp.headers.get("Content-Disposition") || "";
-    let filename = "TERMO DE CONVÊNIO.pdf";
+    let filename = "TERMO DE CONVENIO.docx";
     const match = cd.match(/filename\*=UTF-8''([^;]+)/);
     if (match) filename = decodeURIComponent(match[1]);
     const a = document.createElement("a");
@@ -236,10 +240,10 @@ el("form").addEventListener("submit", async (e) => {
     document.body.appendChild(a);
     a.click();
     a.remove();
-    URL.revokeObjectURL(url);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
     mostrarAvisoAssinatura();
   } catch (e) {
-    alert("Erro ao gerar PDF. Tente novamente em alguns instantes.");
+    alert("Erro ao baixar o arquivo. Tente novamente em alguns instantes.");
   } finally {
     esconderLoading();
   }
