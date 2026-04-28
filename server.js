@@ -165,6 +165,21 @@ function aplicarProtecaoSomenteLeitura(settings) {
 
   settings = settings.replace(/<w:documentProtection\b[^>]*\/>/g, "");
   settings = settings.replace(/<w:documentProtection\b[\s\S]*?<\/w:documentProtection>/g, "");
+
+  const inserirAntes = [
+    /<w:defaultTabStop\b[^>]*\/>/,
+    /<w:hyphenationZone\b[^>]*\/>/,
+    /<w:characterSpacingControl\b[^>]*\/>/,
+    /<w:compat\b[\s\S]*?<\/w:compat>/,
+    /<w:rsids\b[\s\S]*?<\/w:rsids>/
+  ];
+
+  for (const padrao of inserirAntes) {
+    if (padrao.test(settings)) {
+      return settings.replace(padrao, `${protection}$&`);
+    }
+  }
+
   return settings.replace(/(<w:settings\b[^>]*>)/, `$1${protection}`);
 }
 
