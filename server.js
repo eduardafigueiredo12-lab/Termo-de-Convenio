@@ -134,7 +134,7 @@ function corrigirSettings(settings) {
 function gerarHashProtecaoDocumento(senha, salt) {
   let hash = crypto
     .createHash("sha1")
-    .update(Buffer.concat([salt, Buffer.from(String(senha || ""), "utf16le")]))
+    .update(Buffer.concat([Buffer.from(String(senha || ""), "utf16le"), salt]))
     .digest();
 
   for (let i = 0; i < PROTECAO_SPIN_COUNT; i++) {
