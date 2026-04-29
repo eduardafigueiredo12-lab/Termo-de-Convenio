@@ -45,6 +45,8 @@ function esconderLoading(){
 function mostrarAvisoAssinatura(){
   const modal = el("signatureNoticeModal");
   if (!modal) return;
+  document.body.dataset.documentReady = "true";
+  atualizarStepper();
   modal.classList.remove("hidden");
 }
 
@@ -69,6 +71,7 @@ function atualizarCampoOutroCurso(){
   box.classList.toggle("hidden", !mostrar);
   input.required = mostrar;
   if (!mostrar) input.value = "";
+  atualizarStepper();
 }
 
 el("curso").addEventListener("change", atualizarCampoOutroCurso);
@@ -112,6 +115,7 @@ function atualizarTipoUnidade(){
   } else if (el("cargo").value === "Profissional autônomo") {
     el("cargo").value = "";
   }
+  atualizarStepper();
 }
 
 document.querySelectorAll("input[name='tipo_unidade']").forEach(input => {
@@ -151,6 +155,7 @@ function preencher(dados){
   } else {
     el("sociosBox").classList.add("hidden");
   }
+  atualizarStepper();
 }
 
 function selecionarSocio(i){
@@ -158,6 +163,7 @@ function selecionarSocio(i){
   if (!s) return;
   el("representante").value = s.nome || "";
   el("cargo").value = s.cargo || "Sócio/Administrador";
+  atualizarStepper();
 }
 
 el("socios").addEventListener("change", e => selecionarSocio(e.target.value));
@@ -171,7 +177,62 @@ el("outraPessoa").addEventListener("change", e => {
   } else if (sociosEncontrados.length) {
     selecionarSocio(el("socios").value || 0);
   }
+  atualizarStepper();
 });
+
+const STEP_FIELDS = {
+  1: [
+    "cnpj","cpf","razao_social","endereco","numero","bairro","cep","cidade","estado",
+    "responsavel_estagios","contato_responsavel"
+  ],
+  2: ["representante","cargo","email_assinatura"],
+  3: ["tipo_estagio","curso","outro_curso"]
+};
+
+function campoVisivel(campo){
+  return campo && !campo.disabled && !campo.closest(".hidden");
+}
+
+function campoObrigatorioValido(id){
+  const campo = el(id);
+  if (!campoVisivel(campo) || !campo.required) return true;
+  return campo.checkValidity() && String(campo.value || "").trim() !== "";
+}
+
+function etapaCompleta(numero){
+  if (numero === 4) return document.body.dataset.documentReady === "true";
+  return (STEP_FIELDS[numero] || []).every(campoObrigatorioValido);
+}
+
+function etapaAtual(){
+  const ativo = document.activeElement;
+  const secaoAtiva = ativo?.closest?.("[data-step-section]");
+  if (secaoAtiva) return Number(secaoAtiva.dataset.stepSection);
+  return [1,2,3].find(numero => !etapaCompleta(numero)) || 4;
+}
+
+function atualizarStepper(){
+  const steps = document.querySelectorAll(".stepper .step");
+  if (!steps.length) return;
+  const atual = etapaAtual();
+
+  steps.forEach(step => {
+    const numero = Number(step.dataset.step);
+    const completa = etapaCompleta(numero);
+    step.classList.toggle("is-complete", completa);
+    step.classList.toggle("is-current", numero === atual && !completa);
+    if (numero === atual && !completa) {
+      step.setAttribute("aria-current", "step");
+    } else {
+      step.removeAttribute("aria-current");
+    }
+  });
+}
+
+document.addEventListener("input", atualizarStepper);
+document.addEventListener("change", atualizarStepper);
+document.addEventListener("focusin", atualizarStepper);
+document.addEventListener("DOMContentLoaded", atualizarStepper);
 
 el("buscar").addEventListener("click", async () => {
   if (tipoUnidadeSelecionado() !== "cnpj") return;
@@ -237,7 +298,7 @@ el("form").addEventListener("submit", async (e) => {
     dados.cnpj = dados.cpf;
   }
 
-  mostrarLoading("Gerando arquivo", "Estamos preparando o Termo de Convenio em Word. Aguarde alguns instantes.");
+  mostrarLoading("Gerando arquivo", "Estamos preparando o Termo de Convênio em Word. Aguarde alguns instantes.");
 
   try {
     const resp = await fetch(apiUrl("/api/gerar"), {
