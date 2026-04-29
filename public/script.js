@@ -130,6 +130,10 @@ el("cpf").addEventListener("input", e => {
 function preencher(dados){
   const mapa = ["razao_social","cep","endereco","numero","complemento","bairro","cidade","estado"];
   mapa.forEach(k => { if (dados[k]) el(k).value = dados[k]; });
+  if (dados.email && el("site") && !el("site").value) el("site").value = dados.email;
+  if (dados.telefone && el("contato_responsavel") && !el("contato_responsavel").value) {
+    el("contato_responsavel").value = dados.telefone;
+  }
 
   sociosEncontrados = dados.socios || [];
   const sel = el("socios");
@@ -183,12 +187,20 @@ el("buscar").addEventListener("click", async () => {
   mostrarLoading("Consultando CNPJ", "Buscando os dados da unidade concedente. Aguarde...");
   try {
     const r = await fetch(apiUrl(`/api/cnpj/${cnpj}`));
-    const dados = await r.json();
-    if (!r.ok) throw new Error(dados.erro || "Erro ao consultar CNPJ.");
+    const dados = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      console.error("Erro real na consulta de CNPJ:", {
+        status: r.status,
+        statusText: r.statusText,
+        resposta: dados
+      });
+      throw new Error(dados.erro || "Erro ao consultar CNPJ.");
+    }
     preencher(dados);
     msg.className = "msg success";
     msg.textContent = "Dados localizados. Confira as informações antes de baixar o termo.";
   } catch (e) {
+    console.error("Falha ao consultar CNPJ:", e);
     msg.className = "msg error";
     msg.textContent = e.message || "Não foi possível consultar o CNPJ. Preencha manualmente.";
   } finally {
