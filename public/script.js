@@ -237,10 +237,10 @@ el("form").addEventListener("submit", async (e) => {
     dados.cnpj = dados.cpf;
   }
 
-  mostrarLoading("Gerando arquivo", "Estamos preparando o Termo de Convenio em PDF. Aguarde alguns instantes.");
+  mostrarLoading("Gerando arquivo", "Estamos preparando o Termo de Convenio em Word. Aguarde alguns instantes.");
 
   try {
-    const resp = await fetch(apiUrl("/api/gerar-pdf"), {
+    const resp = await fetch(apiUrl("/api/gerar"), {
       method:"POST",
       headers:{ "Content-Type":"application/json" },
       body: JSON.stringify(dados)
@@ -254,7 +254,7 @@ el("form").addEventListener("submit", async (e) => {
 
     const blob = await resp.blob();
     const cd = resp.headers.get("Content-Disposition") || "";
-    let filename = "TERMO DE CONVENIO.pdf";
+    let filename = "TERMO DE CONVENIO.docx";
     const match = cd.match(/filename\*=UTF-8''([^;]+)/);
     if (match) filename = decodeURIComponent(match[1]);
     const a = document.createElement("a");
