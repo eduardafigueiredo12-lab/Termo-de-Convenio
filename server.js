@@ -3,6 +3,7 @@ const express = require("express");
 const cors = require("cors");
 const path = require("path");
 const fs = require("fs");
+const crypto = require("crypto");
 const http = require("http");
 const https = require("https");
 const PizZip = require("pizzip");
@@ -15,6 +16,8 @@ app.use(express.json({ limit: "2mb" }));
 app.use(express.static(path.join(__dirname, "public")));
 
 const PORT = process.env.PORT || 3000;
+const SENHA_PROTECAO_WORD = "convenios";
+const WORD_PROTECTION_SPIN_COUNT = 100000;
 
 const cursosObrigatorios = [
   "Biomedicina",
@@ -40,6 +43,43 @@ function limparNomeArquivo(nome) {
     .replace(/\s+/g, " ")
     .trim()
     .toUpperCase();
+}
+
+function gerarHashProtecaoWord(senha, salt, spinCount = WORD_PROTECTION_SPIN_COUNT) {
+  let hash = crypto
+    .createHash("sha512")
+    .update(Buffer.concat([salt, Buffer.from(String(senha), "utf16le")]))
+    .digest();
+
+  for (let i = 0; i < spinCount; i++) {
+    const contador = Buffer.alloc(4);
+    contador.writeUInt32LE(i, 0);
+    hash = crypto
+      .createHash("sha512")
+      .update(Buffer.concat([hash, contador]))
+      .digest();
+  }
+
+  return hash.toString("base64");
+}
+
+function aplicarRestricaoEdicaoWord(zip, senha = SENHA_PROTECAO_WORD) {
+  const settingsFile = zip.file("word/settings.xml");
+  if (!settingsFile) throw new Error("word/settings.xml não encontrado no DOCX.");
+
+  const salt = crypto.randomBytes(16);
+  const protecao = `<w:documentProtection w:edit="readOnly" w:enforcement="1" w:algorithmName="SHA-512" w:spinCount="${WORD_PROTECTION_SPIN_COUNT}" w:hashValue="${gerarHashProtecaoWord(senha, salt)}" w:saltValue="${salt.toString("base64")}"/>`;
+  let settingsXml = settingsFile.asText();
+
+  if (/<w:documentProtection\b[\s\S]*?\/>/.test(settingsXml)) {
+    settingsXml = settingsXml.replace(/<w:documentProtection\b[\s\S]*?\/>/, protecao);
+  } else if (/<w:documentProtection\b[\s\S]*?<\/w:documentProtection>/.test(settingsXml)) {
+    settingsXml = settingsXml.replace(/<w:documentProtection\b[\s\S]*?<\/w:documentProtection>/, protecao);
+  } else {
+    settingsXml = settingsXml.replace("</w:settings>", `${protecao}</w:settings>`);
+  }
+
+  zip.file("word/settings.xml", settingsXml);
 }
 
 function textoDocx(v) {
@@ -645,6 +685,7 @@ app.post("/api/gerar", (req, res) => {
     const data = dadosTermo(d);
 
     doc.render(data);
+    aplicarRestricaoEdicaoWord(doc.getZip());
 
     const documentoWord = doc.getZip().generate({
       type: "nodebuffer",

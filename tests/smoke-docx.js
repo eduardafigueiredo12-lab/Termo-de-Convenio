@@ -56,6 +56,7 @@ function validarDocx(buffer, nomeArquivo) {
   new Docxtemplater(zip, { paragraphLoop: true, linebreaks: true });
 
   const xml = zip.file("word/document.xml").asText();
+  const settingsXml = zip.file("word/settings.xml").asText();
   const tagsNaoPreenchidas = xml.match(/\{[a-zA-Z0-9_]+\}/g);
   if (tagsNaoPreenchidas) {
     throw new Error(`${nomeArquivo}: marcador não preenchido: ${tagsNaoPreenchidas[0]}`);
@@ -63,6 +64,14 @@ function validarDocx(buffer, nomeArquivo) {
 
   if (!xml.includes("INCOPOSTES")) {
     throw new Error(`${nomeArquivo}: dados do formulário não foram inseridos no documento.`);
+  }
+
+  if (!/<w:documentProtection\b/.test(settingsXml) || !/w:edit="readOnly"/.test(settingsXml) || !/w:enforcement="1"/.test(settingsXml)) {
+    throw new Error(`${nomeArquivo}: restrição de edição do Word não foi aplicada.`);
+  }
+
+  if (!/w:algorithmName="SHA-512"/.test(settingsXml) || !/w:hashValue="/.test(settingsXml) || !/w:saltValue="/.test(settingsXml)) {
+    throw new Error(`${nomeArquivo}: proteção por senha não foi configurada no DOCX.`);
   }
 }
 
