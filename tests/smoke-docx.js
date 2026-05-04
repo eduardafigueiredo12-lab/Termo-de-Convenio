@@ -21,6 +21,7 @@ const dadosBase = {
   cep: "87.720-140",
   cidade: "PARANAVAÍ",
   estado: "PR",
+  telefone_receita: "(44) 99999-0000",
   site: "contabilidade.laisi@incopostes.com.br",
   responsavel_estagios: "Responsável Teste",
   contato_responsavel: "(44) 3045-1500",

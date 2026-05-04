@@ -316,6 +316,7 @@ const CAMPOS_FORMULARIO = [
   "cep",
   "cidade",
   "estado",
+  "telefone_receita",
   "site",
   "responsavel_estagios",
   "contato_responsavel",
@@ -341,6 +342,7 @@ const LIMITES_CAMPOS = {
   cep: 20,
   cidade: 100,
   estado: 40,
+  telefone_receita: 50,
   site: 160,
   responsavel_estagios: 120,
   contato_responsavel: 50,
@@ -438,7 +440,7 @@ function validarDadosFormulario(body) {
     throw erroValidacao("E-mail de contato inválido.");
   }
 
-  dados.telefone = dados.contato_responsavel;
+  dados.telefone = dados.telefone_receita;
   return dados;
 }
 
@@ -482,7 +484,7 @@ function dadosTermo(d) {
     cep: textoDocx(d.cep),
     cidade: textoDocx(d.cidade),
     estado: textoDocx(d.estado),
-    telefone: textoDocx(d.contato_responsavel || d.telefone),
+    telefone: textoDocx(d.telefone_receita || d.telefone),
     site: textoDocx(montarContatoEmpresa(d)),
     responsavel_estagios: textoDocx(d.responsavel_estagios),
     contato_responsavel: textoDocx(d.contato_responsavel),
@@ -699,9 +701,9 @@ function adicionarDadosConcedente(doc, data, modelo) {
   adicionarLinhaTabela(doc, [["CEP", data.cep], ["Cidade/UF", `${valorCampo(data.cidade, "")} / ${valorCampo(data.estado, "")}`]]);
 
   if (ehModeloObrigatorio(modelo)) {
-    adicionarLinhaTabela(doc, [["Estimativa de vagas", data.estimativa_vagas], ["WhatsApp", data.telefone]]);
+    adicionarLinhaTabela(doc, [["Estimativa de vagas", data.estimativa_vagas], ["Telefone", data.telefone]]);
   } else {
-    adicionarLinhaTabela(doc, [["WhatsApp", data.telefone]]);
+    adicionarLinhaTabela(doc, [["Telefone", data.telefone]]);
   }
 
   adicionarLinhaTabela(doc, [["Responsável/Contato", data.site]], 118);
@@ -946,6 +948,7 @@ function mapDadosEmpresa(dados) {
     cidade: dados.municipio || dados.cidade || "",
     estado: dados.uf || dados.estado || "",
     telefone: [dados.ddd_telefone_1, dados.ddd_telefone_2, dados.telefone].filter(Boolean)[0] || "",
+    telefone_receita: [dados.ddd_telefone_1, dados.ddd_telefone_2, dados.telefone].filter(Boolean)[0] || "",
     email: dados.email || "",
     socios: mapSocios(dados)
   };
