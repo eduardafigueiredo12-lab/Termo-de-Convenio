@@ -1,5 +1,14 @@
 node_modules
-npm-debug.log
+npm-debug.log*
 .git
 .DS_Store
 *.zip
+*.log
+.env
+.env.*
+tmp
+tests
+coverage
+.eslintcache
+node-start-test.txt
+start-test.txt

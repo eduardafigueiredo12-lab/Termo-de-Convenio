@@ -1,4 +1,4 @@
-
+﻿
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
@@ -11,13 +11,159 @@ const Docxtemplater = require("docxtemplater");
 const PDFDocument = require("pdfkit");
 
 const app = express();
-app.use(cors());
-app.use(express.json({ limit: "2mb" }));
-app.use(express.static(path.join(__dirname, "public")));
-
 const PORT = process.env.PORT || 3000;
-const SENHA_PROTECAO_WORD = "convenios";
+const isProduction = process.env.NODE_ENV === "production";
+const JSON_BODY_LIMIT = process.env.JSON_BODY_LIMIT || "100kb";
+const MAX_EXTERNAL_JSON_BYTES = numeroInteiroPositivo(process.env.MAX_EXTERNAL_JSON_BYTES, 256 * 1024);
+const SENHA_PROTECAO_WORD = process.env.WORD_PROTECTION_PASSWORD || "convenios";
 const WORD_PROTECTION_SPIN_COUNT = 100000;
+
+if (process.env.TRUST_PROXY) {
+  app.set("trust proxy", process.env.TRUST_PROXY);
+}
+
+app.disable("x-powered-by");
+app.use(aplicarHeadersSeguranca);
+app.use(rejeitarOrigemNaoPermitida);
+app.use(cors(criarCorsOptions));
+app.use("/api", express.json({ limit: JSON_BODY_LIMIT, strict: true, type: "application/json" }));
+app.use(tratarErroJson);
+app.use(express.static(path.join(__dirname, "public"), {
+  dotfiles: "ignore",
+  index: "index.html"
+}));
+
+function numeroInteiroPositivo(valor, fallback) {
+  const n = Number(valor);
+  return Number.isInteger(n) && n > 0 ? n : fallback;
+}
+
+function origemHostIgualAoRequest(origin, req) {
+  try {
+    return new URL(origin).host === req.get("host");
+  } catch (e) {
+    return false;
+  }
+}
+
+function origemLocalDesenvolvimento(origin) {
+  if (isProduction) return false;
+  return origin === "null" || /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(?::\d+)?$/i.test(origin);
+}
+
+function origensPermitidasConfiguradas() {
+  return String(process.env.CORS_ORIGINS || process.env.CORS_ORIGIN || "")
+    .split(",")
+    .map(origin => origin.trim())
+    .filter(Boolean);
+}
+
+function origemPermitida(origin, req) {
+  if (!origin) return true;
+  if (origemHostIgualAoRequest(origin, req)) return true;
+  if (origemLocalDesenvolvimento(origin)) return true;
+  return origensPermitidasConfiguradas().includes(origin);
+}
+
+function rejeitarOrigemNaoPermitida(req, res, next) {
+  const origin = req.get("Origin");
+  if (!origemPermitida(origin, req)) {
+    return res.status(403).json({ erro: "Origem não permitida." });
+  }
+  next();
+}
+
+function criarCorsOptions(req, callback) {
+  const origin = req.get("Origin");
+  callback(null, {
+    origin: origin && origemPermitida(origin, req) ? origin : false,
+    methods: ["GET", "POST", "OPTIONS"],
+    allowedHeaders: ["Content-Type"],
+    exposedHeaders: ["Content-Disposition"],
+    maxAge: 600
+  });
+}
+
+function aplicarHeadersSeguranca(req, res, next) {
+  const csp = [
+    "default-src 'self'",
+    "base-uri 'self'",
+    "object-src 'none'",
+    "script-src 'self'",
+    "style-src 'self' https://fonts.googleapis.com",
+    "font-src 'self' https://fonts.gstatic.com",
+    "img-src 'self' data:",
+    "connect-src 'self'",
+    "form-action 'self'",
+    "frame-ancestors 'none'"
+  ];
+
+  if (isProduction) csp.push("upgrade-insecure-requests");
+
+  res.setHeader("Content-Security-Policy", csp.join("; "));
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("X-Frame-Options", "DENY");
+  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=()");
+  res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
+  res.setHeader("Cross-Origin-Resource-Policy", "same-origin");
+  if (isProduction) {
+    res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+  }
+  next();
+}
+
+function tratarErroJson(err, req, res, next) {
+  if (!err) return next();
+  if (err.type === "entity.too.large") {
+    return res.status(413).json({ erro: "Payload muito grande." });
+  }
+  if (err instanceof SyntaxError && "body" in err) {
+    return res.status(400).json({ erro: "JSON inválido." });
+  }
+  next(err);
+}
+
+function criarRateLimiter({ janelaMs, maximo, escopo }) {
+  const acessos = new Map();
+
+  return (req, res, next) => {
+    const agora = Date.now();
+    const chave = `${escopo}:${req.ip}`;
+    const registro = acessos.get(chave);
+
+    if (!registro || registro.expiraEm <= agora) {
+      acessos.set(chave, { total: 1, expiraEm: agora + janelaMs });
+      return next();
+    }
+
+    if (registro.total >= maximo) {
+      const segundos = Math.max(1, Math.ceil((registro.expiraEm - agora) / 1000));
+      res.setHeader("Retry-After", String(segundos));
+      return res.status(429).json({ erro: "Muitas requisições. Tente novamente em instantes." });
+    }
+
+    registro.total += 1;
+    if (acessos.size > 10000) {
+      for (const [key, value] of acessos) {
+        if (value.expiraEm <= agora) acessos.delete(key);
+      }
+    }
+    next();
+  };
+}
+
+const limitarConsultaCnpj = criarRateLimiter({
+  janelaMs: 60 * 1000,
+  maximo: numeroInteiroPositivo(process.env.CNPJ_RATE_LIMIT_MAX, 30),
+  escopo: "cnpj"
+});
+
+const limitarGeracaoDocumento = criarRateLimiter({
+  janelaMs: 10 * 60 * 1000,
+  maximo: numeroInteiroPositivo(process.env.DOCUMENT_RATE_LIMIT_MAX, 20),
+  escopo: "documento"
+});
 
 const cursosObrigatorios = [
   "Biomedicina",
@@ -37,12 +183,14 @@ function apenasNumeros(v) {
 }
 
 function limparNomeArquivo(nome) {
-  return String(nome || "LOCAL")
+  const limpo = String(nome || "LOCAL")
     .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
     .replace(/[\\/:*?"<>|]/g, "")
     .replace(/\s+/g, " ")
     .trim()
-    .toUpperCase();
+    .toUpperCase()
+    .slice(0, 80);
+  return limpo || "LOCAL";
 }
 
 function gerarHashProtecaoWord(senha, salt, spinCount = WORD_PROTECTION_SPIN_COUNT) {
@@ -126,6 +274,180 @@ function cursoExisteNaLista(curso) {
 
 function checkCurso(curso, nome) {
   return normalizarTexto(curso) === normalizarTexto(nome) ? "X" : " ";
+}
+
+const TIPOS_ESTAGIO_CANONICOS = new Map([
+  "Estágio obrigatório",
+  "Estágio remunerado"
+].map(valor => [normalizarTexto(valor), valor]));
+
+const CURSOS_CANONICOS = new Map([
+  "Biomedicina",
+  "Farmácia",
+  "Fonoaudiologia",
+  "Fisioterapia",
+  "Nutrição",
+  "Terapia Ocupacional",
+  "Radiologia",
+  "Técnicas Oftálmicas",
+  "Pós em Procedimentos Injetáveis",
+  "Engenharias",
+  "Licenciaturas",
+  "Técnico em Enfermagem",
+  "Técnico em Transações Imobiliárias",
+  "Pós-Graduação em Biomedicina Estética",
+  "Outro"
+].map(valor => [normalizarTexto(valor), valor]));
+
+const CAMPOS_FORMULARIO = [
+  "tipo_unidade",
+  "tipo_estagio",
+  "curso",
+  "outro_curso",
+  "cnpj",
+  "cpf",
+  "razao_social",
+  "alvara",
+  "estimativa_vagas",
+  "endereco",
+  "numero",
+  "complemento",
+  "bairro",
+  "cep",
+  "cidade",
+  "estado",
+  "site",
+  "responsavel_estagios",
+  "contato_responsavel",
+  "representante",
+  "cargo",
+  "email_assinatura"
+];
+
+const LIMITES_CAMPOS = {
+  tipo_unidade: 10,
+  tipo_estagio: 40,
+  curso: 80,
+  outro_curso: 100,
+  cnpj: 20,
+  cpf: 20,
+  razao_social: 160,
+  alvara: 100,
+  estimativa_vagas: 40,
+  endereco: 160,
+  numero: 30,
+  complemento: 120,
+  bairro: 100,
+  cep: 20,
+  cidade: 100,
+  estado: 40,
+  site: 160,
+  responsavel_estagios: 120,
+  contato_responsavel: 50,
+  representante: 120,
+  cargo: 100,
+  email_assinatura: 160
+};
+
+const CAMPOS_OBRIGATORIOS = [
+  "tipo_estagio",
+  "curso",
+  "razao_social",
+  "endereco",
+  "numero",
+  "bairro",
+  "cep",
+  "cidade",
+  "estado",
+  "responsavel_estagios",
+  "contato_responsavel",
+  "representante",
+  "cargo",
+  "email_assinatura"
+];
+
+function erroValidacao(mensagem) {
+  const erro = new Error(mensagem);
+  erro.statusCode = 400;
+  return erro;
+}
+
+function textoEntrada(campo, valor) {
+  if (Array.isArray(valor) || (valor && typeof valor === "object")) {
+    throw erroValidacao(`Campo inválido: ${campo}.`);
+  }
+
+  const texto = textoDocx(valor).replace(/[<>]/g, "");
+  const limite = LIMITES_CAMPOS[campo] || 160;
+  if (texto.length > limite) {
+    throw erroValidacao(`Campo muito longo: ${campo}.`);
+  }
+  return texto;
+}
+
+function valorCanonico(mapa, valor, campo) {
+  const canonico = mapa.get(normalizarTexto(valor));
+  if (!canonico) throw erroValidacao(`Valor inválido para ${campo}.`);
+  return canonico;
+}
+
+function emailValido(email) {
+  return /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(email);
+}
+
+function validarDadosFormulario(body) {
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    throw erroValidacao("Payload inválido.");
+  }
+
+  const dados = {};
+  for (const campo of CAMPOS_FORMULARIO) {
+    dados[campo] = textoEntrada(campo, body[campo]);
+  }
+
+  dados.tipo_unidade = dados.tipo_unidade === "cpf" ? "cpf" : "cnpj";
+  dados.tipo_estagio = valorCanonico(TIPOS_ESTAGIO_CANONICOS, dados.tipo_estagio, "tipo de estágio");
+  dados.curso = valorCanonico(CURSOS_CANONICOS, dados.curso, "curso");
+
+  for (const campo of CAMPOS_OBRIGATORIOS) {
+    if (!dados[campo]) throw erroValidacao(`Campo obrigatório ausente: ${campo}.`);
+  }
+
+  if (dados.curso === "Outro") {
+    if (!dados.outro_curso) throw erroValidacao("Informe o curso.");
+  } else {
+    dados.outro_curso = "";
+  }
+
+  if (dados.tipo_unidade === "cpf") {
+    const cpfInformado = dados.cpf || dados.cnpj;
+    if (apenasNumeros(cpfInformado).length !== 11) {
+      throw erroValidacao("CPF inválido.");
+    }
+    dados.cpf = cpfInformado;
+    dados.cnpj = cpfInformado;
+  } else if (apenasNumeros(dados.cnpj).length !== 14) {
+    throw erroValidacao("CNPJ inválido.");
+  }
+
+  if (!emailValido(dados.email_assinatura)) {
+    throw erroValidacao("E-mail para assinatura inválido.");
+  }
+
+  if (dados.site && !emailValido(dados.site)) {
+    throw erroValidacao("E-mail de contato inválido.");
+  }
+
+  dados.telefone = dados.contato_responsavel;
+  return dados;
+}
+
+function responderErroAplicacao(res, erro, mensagemPublica) {
+  if (erro && erro.statusCode === 400) {
+    return res.status(400).json({ erro: erro.message });
+  }
+  console.error(erro);
+  return res.status(500).json({ erro: mensagemPublica });
 }
 
 function montarContatoEmpresa(d) {
@@ -564,8 +886,16 @@ function fetchJson(url, nomeProvedor) {
       }
     }, resp => {
       let body = "";
+      let bytesRecebidos = 0;
       resp.setEncoding("utf8");
-      resp.on("data", chunk => { body += chunk; });
+      resp.on("data", chunk => {
+        bytesRecebidos += Buffer.byteLength(chunk, "utf8");
+        if (bytesRecebidos > MAX_EXTERNAL_JSON_BYTES) {
+          req.destroy(new Error(`${nomeProvedor}: resposta excedeu o limite permitido.`));
+          return;
+        }
+        body += chunk;
+      });
       resp.on("end", () => {
         let json;
         try {
@@ -621,7 +951,7 @@ function mapDadosEmpresa(dados) {
   };
 }
 
-app.get("/api/cnpj/:cnpj", async (req, res) => {
+app.get("/api/cnpj/:cnpj", limitarConsultaCnpj, async (req, res) => {
   const cnpj = apenasNumeros(req.params.cnpj);
   if (cnpj.length !== 14) return res.status(400).json({ erro: "CNPJ inválido." });
 
@@ -646,15 +976,15 @@ app.get("/api/cnpj/:cnpj", async (req, res) => {
       console.warn(`[CNPJ] Falha no provedor ${provedor.nome} para ${cnpj}: ${detalhe}`);
     }
   }
+  console.warn(`[CNPJ] Todos os provedores falharam para ${cnpj}: ${erros.join(" | ")}`);
   return res.status(502).json({
-    erro: "Não foi possível consultar o CNPJ no momento. Preencha manualmente.",
-    detalhe: erros.join(" | ")
+    erro: "Não foi possível consultar o CNPJ no momento. Preencha manualmente."
   });
 });
 
-app.post("/api/gerar-pdf", async (req, res) => {
+app.post("/api/gerar-pdf", limitarGeracaoDocumento, async (req, res) => {
   try {
-    const d = req.body || {};
+    const d = validarDadosFormulario(req.body);
     const pdf = await gerarPdfTermo(d);
     const nomeLocal = limparNomeArquivo(d.razao_social || d.nome_fantasia || "LOCAL");
     const filename = `${nomeLocal} - TERMO DE CONVENIO.pdf`;
@@ -663,14 +993,13 @@ app.post("/api/gerar-pdf", async (req, res) => {
     res.setHeader("Content-Disposition", `attachment; filename="${encodeURIComponent(filename)}"; filename*=UTF-8''${encodeURIComponent(filename)}`);
     res.send(pdf);
   } catch (e) {
-    console.error(e);
-    res.status(500).json({ erro: "Erro ao gerar PDF.", detalhe: e.message });
+    responderErroAplicacao(res, e, "Erro ao gerar PDF.");
   }
 });
 
-app.post("/api/gerar", (req, res) => {
+app.post("/api/gerar", limitarGeracaoDocumento, (req, res) => {
   try {
-    const d = req.body || {};
+    const d = validarDadosFormulario(req.body);
     const modelo = selecionarModelo(d);
 
     const templatePath = path.join(__dirname, "templates", modelo);
@@ -699,8 +1028,7 @@ app.post("/api/gerar", (req, res) => {
     res.setHeader("Content-Disposition", `attachment; filename="${encodeURIComponent(filename)}"; filename*=UTF-8''${encodeURIComponent(filename)}`);
     res.send(documentoWord);
   } catch (e) {
-    console.error(e);
-    res.status(500).json({ erro: "Erro ao gerar arquivo.", detalhe: e.message });
+    responderErroAplicacao(res, e, "Erro ao gerar arquivo.");
   }
 });
 
@@ -709,3 +1037,4 @@ if (require.main === module) {
 }
 
 module.exports = app;
+

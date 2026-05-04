@@ -1,4 +1,4 @@
-:root{
+﻿:root{
   --ink:#111111;
   --ink-soft:#1f1f1d;
   --graphite:#343536;
@@ -634,6 +634,7 @@ select{
   cursor:pointer;
 }
 
+
 input::placeholder{
   color:#9a978f;
 }
@@ -885,6 +886,7 @@ button:hover{
   max-width:610px;
   color:rgba(255,255,255,.72);
 }
+
 
 .resources-panel{
   margin-top:18px;
@@ -1305,3 +1307,4 @@ button:hover{
     min-height:50px;
   }
 }
+

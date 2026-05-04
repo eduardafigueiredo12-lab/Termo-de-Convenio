@@ -2,6 +2,12 @@ let sociosEncontrados = [];
 
 function el(id){ return document.getElementById(id); }
 function somenteNumeros(v){ return String(v || "").replace(/\D/g, ""); }
+document.addEventListener("DOMContentLoaded", () => {
+  document.querySelectorAll(".topbar-logo, .loading-logo").forEach(img => {
+    img.addEventListener("error", () => { img.hidden = true; });
+  });
+});
+
 function tipoUnidadeSelecionado(){
   return document.querySelector("input[name='tipo_unidade']:checked")?.value || "cnpj";
 }
