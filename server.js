@@ -4,7 +4,6 @@ const cors = require("cors");
 const path = require("path");
 const fs = require("fs");
 const crypto = require("crypto");
-const http = require("http");
 const https = require("https");
 const PizZip = require("pizzip");
 const Docxtemplater = require("docxtemplater");
@@ -15,11 +14,25 @@ const PORT = process.env.PORT || 3000;
 const isProduction = process.env.NODE_ENV === "production";
 const JSON_BODY_LIMIT = process.env.JSON_BODY_LIMIT || "100kb";
 const MAX_EXTERNAL_JSON_BYTES = numeroInteiroPositivo(process.env.MAX_EXTERNAL_JSON_BYTES, 256 * 1024);
-const SENHA_PROTECAO_WORD = process.env.WORD_PROTECTION_PASSWORD || "convenios";
+const SENHA_PROTECAO_WORD = (() => {
+  const senha = process.env.WORD_PROTECTION_PASSWORD;
+  if (!senha) {
+    if (isProduction) throw new Error("[SEGURANÇA] WORD_PROTECTION_PASSWORD não definida. Defina a variável de ambiente antes de iniciar em produção.");
+    console.warn("[AVISO] WORD_PROTECTION_PASSWORD não definida. Usando senha de desenvolvimento — não use em produção.");
+    return "dev-local-convenios-nao-usar-producao";
+  }
+  return senha;
+})();
 const WORD_PROTECTION_SPIN_COUNT = 100000;
 
 if (process.env.TRUST_PROXY) {
-  app.set("trust proxy", process.env.TRUST_PROXY);
+  const val = process.env.TRUST_PROXY;
+  if (val === "true") {
+    const msg = "TRUST_PROXY=true confia em todos os proxies e permite spoofing de IP no rate limiter. Use um número (ex: TRUST_PROXY=1 para um único proxy reverso).";
+    if (isProduction) throw new Error(`[SEGURANÇA] ${msg}`);
+    console.warn(`[AVISO SEGURANÇA] ${msg}`);
+  }
+  app.set("trust proxy", isNaN(Number(val)) ? val : Number(val));
 }
 
 app.disable("x-powered-by");
@@ -180,6 +193,34 @@ const cursosObrigatorios = [
 
 function apenasNumeros(v) {
   return String(v || "").replace(/\D/g, "");
+}
+
+function cpfValido(cpf) {
+  const n = apenasNumeros(cpf);
+  if (n.length !== 11 || /^(\d)\1{10}$/.test(n)) return false;
+  let soma = 0;
+  for (let i = 0; i < 9; i++) soma += Number(n[i]) * (10 - i);
+  let resto = (soma * 10) % 11;
+  if (resto >= 10) resto = 0;
+  if (resto !== Number(n[9])) return false;
+  soma = 0;
+  for (let i = 0; i < 10; i++) soma += Number(n[i]) * (11 - i);
+  resto = (soma * 10) % 11;
+  if (resto >= 10) resto = 0;
+  return resto === Number(n[10]);
+}
+
+function cnpjValido(cnpj) {
+  const n = apenasNumeros(cnpj);
+  if (n.length !== 14 || /^(\d)\1{13}$/.test(n)) return false;
+  const pesos1 = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+  const pesos2 = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+  let soma = pesos1.reduce((acc, p, i) => acc + Number(n[i]) * p, 0);
+  let resto = soma % 11;
+  if ((resto < 2 ? 0 : 11 - resto) !== Number(n[12])) return false;
+  soma = pesos2.reduce((acc, p, i) => acc + Number(n[i]) * p, 0);
+  resto = soma % 11;
+  return (resto < 2 ? 0 : 11 - resto) === Number(n[13]);
 }
 
 function limparNomeArquivo(nome) {
@@ -423,12 +464,12 @@ function validarDadosFormulario(body) {
 
   if (dados.tipo_unidade === "cpf") {
     const cpfInformado = dados.cpf || dados.cnpj;
-    if (apenasNumeros(cpfInformado).length !== 11) {
+    if (!cpfValido(cpfInformado)) {
       throw erroValidacao("CPF inválido.");
     }
     dados.cpf = cpfInformado;
     dados.cnpj = cpfInformado;
-  } else if (apenasNumeros(dados.cnpj).length !== 14) {
+  } else if (!cnpjValido(dados.cnpj)) {
     throw erroValidacao("CNPJ inválido.");
   }
 
@@ -878,7 +919,10 @@ function gerarPdfTermo(d) {
 function fetchJson(url, nomeProvedor) {
   return new Promise((resolve, reject) => {
     const parsed = new URL(url);
-    const client = parsed.protocol === "http:" ? http : https;
+    if (parsed.protocol !== "https:") {
+      return reject(new Error(`${nomeProvedor}: apenas HTTPS é permitido para consultas externas.`));
+    }
+    const client = https;
     const req = client.request(parsed, {
       method: "GET",
       timeout: 12000,
@@ -964,6 +1008,7 @@ app.get("/api/cnpj/:cnpj", limitarConsultaCnpj, async (req, res) => {
     { nome: "ReceitaWS", url: `https://receitaws.com.br/v1/cnpj/${cnpj}` }
   ];
 
+  const cnpjMascarado = cnpj.slice(0, 2) + "****" + cnpj.slice(-4);
   const erros = [];
   for (const provedor of provedores) {
     try {
@@ -976,10 +1021,10 @@ app.get("/api/cnpj/:cnpj", limitarConsultaCnpj, async (req, res) => {
     } catch (e) {
       const detalhe = e.message || String(e);
       erros.push(detalhe);
-      console.warn(`[CNPJ] Falha no provedor ${provedor.nome} para ${cnpj}: ${detalhe}`);
+      console.warn(`[CNPJ] Falha no provedor ${provedor.nome} para ${cnpjMascarado}: ${detalhe}`);
     }
   }
-  console.warn(`[CNPJ] Todos os provedores falharam para ${cnpj}: ${erros.join(" | ")}`);
+  console.warn(`[CNPJ] Todos os provedores falharam para ${cnpjMascarado}: ${erros.join(" | ")}`);
   return res.status(502).json({
     erro: "Não foi possível consultar o CNPJ no momento. Preencha manualmente."
   });
