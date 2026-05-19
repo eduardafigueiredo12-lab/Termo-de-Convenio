@@ -260,7 +260,7 @@
             <div>
               <p class="section-kicker">Dados acadêmicos</p>
               <h2 id="convenioTitle">Informações do convênio</h2>
-              <p>Selecione o tipo de estágio e o curso relacionado ao convênio.</p>
+              <p>Selecione o tipo de estágio e um ou mais cursos relacionados ao convênio.</p>
             </div>
           </div>
 
@@ -274,9 +274,8 @@
               </select>
             </label>
             <label class="field">
-              <span class="field-label">Curso <strong aria-hidden="true">*</strong></span>
-              <select id="curso" required>
-                <option value="">Selecione...</option>
+              <span class="field-label">Cursos <strong aria-hidden="true">*</strong></span>
+              <select id="curso" required multiple size="8" aria-describedby="cursoHint">
                 <option>Biomedicina</option>
                 <option>Farmácia</option>
                 <option>Fonoaudiologia</option>
@@ -292,6 +291,7 @@
                 <option>Técnico em Transações Imobiliárias</option>
                 <option>Outro</option>
               </select>
+              <small id="cursoHint">Use Ctrl ou Shift para selecionar mais de um curso.</small>
             </label>
           </div>
 

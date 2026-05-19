@@ -245,7 +245,7 @@ function gerarHashProtecaoWord(senha, salt, spinCount = WORD_PROTECTION_SPIN_COU
     contador.writeUInt32LE(i, 0);
     hash = crypto
       .createHash("sha512")
-      .update(Buffer.concat([hash, contador]))
+      .update(Buffer.concat([contador, hash]))
       .digest();
   }
 
@@ -313,8 +313,19 @@ function cursoExisteNaLista(curso) {
   return cursosDoTermo.some(nome => normalizarTexto(nome) === c);
 }
 
-function checkCurso(curso, nome) {
-  return normalizarTexto(curso) === normalizarTexto(nome) ? "X" : " ";
+function cursoEhObrigatorio(curso) {
+  const c = normalizarTexto(curso);
+  return cursosObrigatorios.some(nome => normalizarTexto(nome) === c);
+}
+
+function cursosSelecionados(d) {
+  if (Array.isArray(d.cursos) && d.cursos.length) return d.cursos;
+  return d.curso ? [d.curso] : [];
+}
+
+function checkCurso(cursoOuCursos, nome) {
+  const cursos = Array.isArray(cursoOuCursos) ? cursoOuCursos : [cursoOuCursos];
+  return cursos.some(curso => normalizarTexto(curso) === normalizarTexto(nome)) ? "X" : " ";
 }
 
 const TIPOS_ESTAGIO_CANONICOS = new Map([
@@ -434,6 +445,27 @@ function valorCanonico(mapa, valor, campo) {
   return canonico;
 }
 
+function cursosCanonicosFormulario(body) {
+  const valor = Object.prototype.hasOwnProperty.call(body, "cursos") ? body.cursos : body.curso;
+  const entradas = Array.isArray(valor) ? valor : [valor];
+  const cursos = [];
+  const vistos = new Set();
+
+  for (const entrada of entradas) {
+    const texto = textoEntrada("curso", entrada);
+    if (!texto) continue;
+    const canonico = valorCanonico(CURSOS_CANONICOS, texto, "curso");
+    const chave = normalizarTexto(canonico);
+    if (!vistos.has(chave)) {
+      cursos.push(canonico);
+      vistos.add(chave);
+    }
+  }
+
+  if (!cursos.length) throw erroValidacao("Campo obrigatório ausente: curso.");
+  return cursos;
+}
+
 function emailValido(email) {
   return /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(email);
 }
@@ -445,18 +477,20 @@ function validarDadosFormulario(body) {
 
   const dados = {};
   for (const campo of CAMPOS_FORMULARIO) {
+    if (campo === "curso") continue;
     dados[campo] = textoEntrada(campo, body[campo]);
   }
 
   dados.tipo_unidade = dados.tipo_unidade === "cpf" ? "cpf" : "cnpj";
   dados.tipo_estagio = valorCanonico(TIPOS_ESTAGIO_CANONICOS, dados.tipo_estagio, "tipo de estágio");
-  dados.curso = valorCanonico(CURSOS_CANONICOS, dados.curso, "curso");
+  dados.cursos = cursosCanonicosFormulario(body);
+  dados.curso = dados.cursos[0];
 
   for (const campo of CAMPOS_OBRIGATORIOS) {
     if (!dados[campo]) throw erroValidacao(`Campo obrigatório ausente: ${campo}.`);
   }
 
-  if (dados.curso === "Outro") {
+  if (dados.cursos.includes("Outro")) {
     if (!dados.outro_curso) throw erroValidacao("Informe o curso.");
   } else {
     dados.outro_curso = "";
@@ -503,14 +537,17 @@ function montarContatoEmpresa(d) {
 
 function selecionarModelo(d) {
   const tipo = d.tipo_estagio;
+  const cursos = cursosSelecionados(d);
   if (tipo === "Estágio remunerado") return "remunerado.docx";
-  if (tipo === "Estágio obrigatório" && cursosObrigatorios.includes(d.curso)) return "contrapartidas.docx";
+  if (tipo === "Estágio obrigatório" && cursos.length > 0 && cursos.every(cursoEhObrigatorio)) return "contrapartidas.docx";
   return "simples.docx";
 }
 
 function dadosTermo(d) {
-  const curso = textoDocx(d.curso === "Outro" ? (d.outro_curso || "Outro") : (d.curso || ""));
-  const outros = cursoExisteNaLista(curso) ? "" : curso;
+  const cursos = cursosSelecionados(d)
+    .map(curso => textoDocx(curso === "Outro" ? (d.outro_curso || "Outro") : curso))
+    .filter(Boolean);
+  const outros = cursos.filter(curso => !cursoExisteNaLista(curso)).join("\n");
   return {
     razao_social: textoDocx(d.razao_social),
     cnpj: textoDocx(d.cnpj),
@@ -534,19 +571,19 @@ function dadosTermo(d) {
     email_assinatura: textoDocx(d.email_assinatura),
     data_extenso: dataExtensoHoje(),
 
-    chk_biomedicina: checkCurso(curso, "Biomedicina"),
-    chk_farmacia: checkCurso(curso, "Farmácia"),
-    chk_fonoaudiologia: checkCurso(curso, "Fonoaudiologia"),
-    chk_fisioterapia: checkCurso(curso, "Fisioterapia"),
-    chk_nutricao: checkCurso(curso, "Nutrição"),
-    chk_terapia_ocupacional: checkCurso(curso, "Terapia Ocupacional"),
-    chk_radiologia: checkCurso(curso, "Radiologia"),
-    chk_tecnicas_oftalmicas: checkCurso(curso, "Técnicas Oftálmicas"),
-    chk_engenharias: checkCurso(curso, "Engenharias"),
-    chk_licenciaturas: checkCurso(curso, "Licenciaturas"),
-    chk_tecnico_enfermagem: checkCurso(curso, "Técnico em Enfermagem"),
-    chk_tecnico_transacoes_imobiliarias: checkCurso(curso, "Técnico em Transações Imobiliárias"),
-    chk_pos_biomedicina_estetica: checkCurso(curso, "Pós-Graduação em Biomedicina Estética")
+    chk_biomedicina: checkCurso(cursos, "Biomedicina"),
+    chk_farmacia: checkCurso(cursos, "Farmácia"),
+    chk_fonoaudiologia: checkCurso(cursos, "Fonoaudiologia"),
+    chk_fisioterapia: checkCurso(cursos, "Fisioterapia"),
+    chk_nutricao: checkCurso(cursos, "Nutrição"),
+    chk_terapia_ocupacional: checkCurso(cursos, "Terapia Ocupacional"),
+    chk_radiologia: checkCurso(cursos, "Radiologia"),
+    chk_tecnicas_oftalmicas: checkCurso(cursos, "Técnicas Oftálmicas"),
+    chk_engenharias: checkCurso(cursos, "Engenharias"),
+    chk_licenciaturas: checkCurso(cursos, "Licenciaturas"),
+    chk_tecnico_enfermagem: checkCurso(cursos, "Técnico em Enfermagem"),
+    chk_tecnico_transacoes_imobiliarias: checkCurso(cursos, "Técnico em Transações Imobiliárias"),
+    chk_pos_biomedicina_estetica: checkCurso(cursos, "Pós-Graduação em Biomedicina Estética")
   };
 }
 
@@ -1085,4 +1122,3 @@ if (require.main === module) {
 }
 
 module.exports = app;
-

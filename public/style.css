@@ -634,6 +634,15 @@ select{
   cursor:pointer;
 }
 
+select[multiple]{
+  min-height:190px;
+  padding:10px;
+}
+
+select[multiple] option{
+  padding:8px 10px;
+  border-radius:6px;
+}
 
 input::placeholder{
   color:#9a978f;

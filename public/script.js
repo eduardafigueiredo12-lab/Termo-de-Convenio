@@ -12,6 +12,14 @@ function tipoUnidadeSelecionado(){
   return document.querySelector("input[name='tipo_unidade']:checked")?.value || "cnpj";
 }
 
+function cursosSelecionados(){
+  const select = el("curso");
+  if (!select) return [];
+  return Array.from(select.selectedOptions)
+    .map(option => option.value || option.textContent)
+    .filter(Boolean);
+}
+
 function apiUrl(caminho){
   return window.location.protocol === "file:" ? `http://localhost:3000${caminho}` : caminho;
 }
@@ -73,7 +81,7 @@ function atualizarCampoOutroCurso(){
   const box = el("outroCursoBox");
   const input = el("outro_curso");
   if (!box || !input) return;
-  const mostrar = el("curso").value === "Outro";
+  const mostrar = cursosSelecionados().includes("Outro");
   box.classList.toggle("hidden", !mostrar);
   input.required = mostrar;
   if (!mostrar) input.value = "";
@@ -200,6 +208,9 @@ function campoVisivel(campo){
 function campoObrigatorioValido(id){
   const campo = el(id);
   if (!campoVisivel(campo) || !campo.required) return true;
+  if (campo.tagName === "SELECT" && campo.multiple) {
+    return campo.checkValidity() && campo.selectedOptions.length > 0;
+  }
   return campo.checkValidity() && String(campo.value || "").trim() !== "";
 }
 
@@ -295,7 +306,10 @@ el("form").addEventListener("submit", async (e) => {
   ];
 
   const dados = {};
-  ids.forEach(id => dados[id] = el(id)?.value || "");
+  ids.forEach(id => {
+    dados[id] = id === "curso" ? cursosSelecionados() : (el(id)?.value || "");
+  });
+  dados.cursos = dados.curso;
   dados.tipo_unidade = tipoUnidade;
   dados.telefone = dados.telefone_receita;
   if (tipoUnidade === "cpf") {

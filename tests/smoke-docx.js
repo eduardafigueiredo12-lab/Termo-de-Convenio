@@ -1,9 +1,12 @@
 const fs = require("fs");
 const path = require("path");
 const http = require("http");
+const crypto = require("crypto");
 const PizZip = require("pizzip");
 const Docxtemplater = require("docxtemplater");
 const app = require("../server");
+
+const SENHA_TESTE_WORD = process.env.WORD_PROTECTION_PASSWORD || "dev-local-convenios-nao-usar-producao";
 
 const dadosBase = {
   tipo_estagio: "Estágio obrigatório",
@@ -41,6 +44,29 @@ function iniciarServidor() {
   });
 }
 
+function atributoXml(xml, atributo) {
+  const match = xml.match(new RegExp(`${atributo}="([^"]+)"`));
+  return match ? match[1] : "";
+}
+
+function hashProtecaoWord(senha, salt, spinCount) {
+  let hash = crypto
+    .createHash("sha512")
+    .update(Buffer.concat([salt, Buffer.from(String(senha), "utf16le")]))
+    .digest();
+
+  for (let i = 0; i < spinCount; i++) {
+    const contador = Buffer.alloc(4);
+    contador.writeUInt32LE(i, 0);
+    hash = crypto
+      .createHash("sha512")
+      .update(Buffer.concat([contador, hash]))
+      .digest();
+  }
+
+  return hash.toString("base64");
+}
+
 function validarDocx(buffer, nomeArquivo) {
   const zip = new PizZip(buffer);
   const obrigatorios = [
@@ -67,12 +93,28 @@ function validarDocx(buffer, nomeArquivo) {
     throw new Error(`${nomeArquivo}: dados do formulário não foram inseridos no documento.`);
   }
 
+  if (nomeArquivo.includes("contrapartidas") && !xml.includes("CONTRAPARTIDAS")) {
+    throw new Error(`${nomeArquivo}: modelo com contrapartidas nao foi utilizado.`);
+  }
+
+  if (nomeArquivo.includes("simples") && xml.includes("CONTRAPARTIDAS")) {
+    throw new Error(`${nomeArquivo}: modelo sem contrapartidas nao foi utilizado.`);
+  }
+
   if (!/<w:documentProtection\b/.test(settingsXml) || !/w:edit="readOnly"/.test(settingsXml) || !/w:enforcement="1"/.test(settingsXml)) {
     throw new Error(`${nomeArquivo}: restrição de edição do Word não foi aplicada.`);
   }
 
   if (!/w:algorithmName="SHA-512"/.test(settingsXml) || !/w:hashValue="/.test(settingsXml) || !/w:saltValue="/.test(settingsXml)) {
     throw new Error(`${nomeArquivo}: proteção por senha não foi configurada no DOCX.`);
+  }
+
+  const spinCount = Number(atributoXml(settingsXml, "w:spinCount"));
+  const saltValue = atributoXml(settingsXml, "w:saltValue");
+  const hashValue = atributoXml(settingsXml, "w:hashValue");
+  const hashEsperado = hashProtecaoWord(SENHA_TESTE_WORD, Buffer.from(saltValue, "base64"), spinCount);
+  if (hashValue !== hashEsperado) {
+    throw new Error(`${nomeArquivo}: senha do Word nao corresponde ao hash gerado.`);
   }
 }
 
@@ -110,6 +152,14 @@ async function gerarDocx(baseUrl, dados, nomeArquivo) {
       {
         nome: "contrapartidas.docx",
         dados: { ...dadosBase, tipo_estagio: "Estágio obrigatório", curso: "Biomedicina" }
+      },
+      {
+        nome: "contrapartidas-multiplos-obrigatorios.docx",
+        dados: { ...dadosBase, tipo_estagio: "Estágio obrigatório", curso: ["Biomedicina", "Farmácia"] }
+      },
+      {
+        nome: "simples-misto.docx",
+        dados: { ...dadosBase, tipo_estagio: "Estágio obrigatório", curso: ["Biomedicina", "Engenharias"] }
       },
       {
         nome: "remunerado.docx",
