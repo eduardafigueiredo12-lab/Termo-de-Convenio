@@ -245,7 +245,7 @@ function gerarHashProtecaoWord(senha, salt, spinCount = WORD_PROTECTION_SPIN_COU
     contador.writeUInt32LE(i, 0);
     hash = crypto
       .createHash("sha512")
-      .update(Buffer.concat([contador, hash]))
+      .update(Buffer.concat([hash, contador]))
       .digest();
   }
 
@@ -257,7 +257,7 @@ function aplicarRestricaoEdicaoWord(zip, senha = SENHA_PROTECAO_WORD) {
   if (!settingsFile) throw new Error("word/settings.xml não encontrado no DOCX.");
 
   const salt = crypto.randomBytes(16);
-  const protecao = `<w:documentProtection w:edit="readOnly" w:enforcement="1" w:algorithmName="SHA-512" w:spinCount="${WORD_PROTECTION_SPIN_COUNT}" w:hashValue="${gerarHashProtecaoWord(senha, salt)}" w:saltValue="${salt.toString("base64")}"/>`;
+  const protecao = `<w:documentProtection w:edit="readOnly" w:enforcement="1" w:cryptProviderType="rsaAES" w:cryptAlgorithmClass="hash" w:cryptAlgorithmType="typeAny" w:cryptAlgorithmSid="14" w:cryptSpinCount="${WORD_PROTECTION_SPIN_COUNT}" w:hash="${gerarHashProtecaoWord(senha, salt)}" w:salt="${salt.toString("base64")}"/>`;
   let settingsXml = settingsFile.asText();
 
   if (/<w:documentProtection\b[\s\S]*?\/>/.test(settingsXml)) {

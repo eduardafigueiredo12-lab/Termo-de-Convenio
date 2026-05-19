@@ -60,7 +60,7 @@ function hashProtecaoWord(senha, salt, spinCount) {
     contador.writeUInt32LE(i, 0);
     hash = crypto
       .createHash("sha512")
-      .update(Buffer.concat([contador, hash]))
+      .update(Buffer.concat([hash, contador]))
       .digest();
   }
 
@@ -105,13 +105,13 @@ function validarDocx(buffer, nomeArquivo) {
     throw new Error(`${nomeArquivo}: restrição de edição do Word não foi aplicada.`);
   }
 
-  if (!/w:algorithmName="SHA-512"/.test(settingsXml) || !/w:hashValue="/.test(settingsXml) || !/w:saltValue="/.test(settingsXml)) {
+  if (!/w:cryptAlgorithmSid="14"/.test(settingsXml) || !/w:cryptSpinCount="/.test(settingsXml) || !/w:hash="/.test(settingsXml) || !/w:salt="/.test(settingsXml)) {
     throw new Error(`${nomeArquivo}: proteção por senha não foi configurada no DOCX.`);
   }
 
-  const spinCount = Number(atributoXml(settingsXml, "w:spinCount"));
-  const saltValue = atributoXml(settingsXml, "w:saltValue");
-  const hashValue = atributoXml(settingsXml, "w:hashValue");
+  const spinCount = Number(atributoXml(settingsXml, "w:cryptSpinCount"));
+  const saltValue = atributoXml(settingsXml, "w:salt");
+  const hashValue = atributoXml(settingsXml, "w:hash");
   const hashEsperado = hashProtecaoWord(SENHA_TESTE_WORD, Buffer.from(saltValue, "base64"), spinCount);
   if (hashValue !== hashEsperado) {
     throw new Error(`${nomeArquivo}: senha do Word nao corresponde ao hash gerado.`);
