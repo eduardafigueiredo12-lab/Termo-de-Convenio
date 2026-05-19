@@ -1,7 +1,6 @@
 const fs = require("fs");
 const path = require("path");
 const http = require("http");
-const crypto = require("crypto");
 const PizZip = require("pizzip");
 const Docxtemplater = require("docxtemplater");
 const app = require("../server");
@@ -49,24 +48,6 @@ function atributoXml(xml, atributo) {
   return match ? match[1] : "";
 }
 
-function hashProtecaoWord(senha, salt, spinCount) {
-  let hash = crypto
-    .createHash("sha512")
-    .update(Buffer.concat([salt, Buffer.from(String(senha), "utf16le")]))
-    .digest();
-
-  for (let i = 0; i < spinCount; i++) {
-    const contador = Buffer.alloc(4);
-    contador.writeUInt32LE(i, 0);
-    hash = crypto
-      .createHash("sha512")
-      .update(Buffer.concat([hash, contador]))
-      .digest();
-  }
-
-  return hash.toString("base64");
-}
-
 function validarDocx(buffer, nomeArquivo) {
   const zip = new PizZip(buffer);
   const obrigatorios = [
@@ -112,7 +93,7 @@ function validarDocx(buffer, nomeArquivo) {
   const spinCount = Number(atributoXml(settingsXml, "w:cryptSpinCount"));
   const saltValue = atributoXml(settingsXml, "w:salt");
   const hashValue = atributoXml(settingsXml, "w:hash");
-  const hashEsperado = hashProtecaoWord(SENHA_TESTE_WORD, Buffer.from(saltValue, "base64"), spinCount);
+  const hashEsperado = app._internals.gerarHashProtecaoWord(SENHA_TESTE_WORD, Buffer.from(saltValue, "base64"), spinCount);
   if (hashValue !== hashEsperado) {
     throw new Error(`${nomeArquivo}: senha do Word nao corresponde ao hash gerado.`);
   }
@@ -142,6 +123,11 @@ async function gerarDocx(baseUrl, dados, nomeArquivo) {
 }
 
 (async () => {
+  const hashConhecido = app._internals.gerarHashProtecaoWord("Password", Buffer.from("On9D022mrdqvHTb6eEkFGA==", "base64"), 100000);
+  if (hashConhecido !== "uBuZhlyVTOQtRwQuOGjY7GU3FnJbe1VFKvN+j9u27HSbthOY+n1/daU/WCkqV40fG6HxX+pxgR+Ow4ZvAE7aZg==") {
+    throw new Error("Hash de proteção do Word não corresponde ao vetor conhecido.");
+  }
+
   const { server, baseUrl } = await iniciarServidor();
   try {
     const cenarios = [
